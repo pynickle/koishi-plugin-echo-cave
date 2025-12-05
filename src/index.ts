@@ -97,14 +97,7 @@ export function apply(ctx: Context, cfg: Config) {
     );
 
     ctx.command('cave.bind <id:number> <...userIds>', { authority: 4 }).action(
-        async ({ session }, id, ...userIds) => {
-            ctx.logger.info(`Binding users ${JSON.stringify(userIds)} to cave ID ${id}`);
-            for (const uid of userIds) {
-                ctx.logger.info(`User ID to bind: ${uid}`);
-                ctx.logger.info(`userid type: ${typeof uid}`);
-            }
-            await bindUsersToCave(ctx, session, id, userIds);
-        }
+        async ({ session }, id, ...userIds) => await bindUsersToCave(ctx, session, id, userIds)
     );
 }
 
@@ -362,7 +355,7 @@ async function bindUsersToCave(ctx: Context, session: Session, id: number, userI
         return session.text('echo-cave.general.noMsgWithId');
     }
 
-    // Check if all users belong to the group (使用调试版本)
+    // Check if all users belong to the group
     const isAllUsersInGroup = await checkUsersInGroup(ctx, session, parsedUserIds);
     if (!isAllUsersInGroup) {
         return session.text('.userNotInGroup');

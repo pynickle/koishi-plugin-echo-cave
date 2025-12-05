@@ -101,7 +101,6 @@
         "noUserIdProvided": "❌ 请提供要绑定的用户 ID！",
         "msgNotFound": "🔍 未找到该 ID 的回声洞消息",
         "userBoundSuccess": "✅ 已成功将用户绑定到回声洞 #{0}！",
-        "userAlreadyBound": "ℹ️ 该用户已绑定到回声洞 #{0}！",
         "userNotInGroup": "❌ 提供的用户 ID 不全属于该群组！",
         "invalidAllMention": "❌ 不支持 @全体成员，请直接指定具体用户！"
       }
