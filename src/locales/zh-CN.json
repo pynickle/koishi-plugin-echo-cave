@@ -67,14 +67,20 @@
         "invalidAllMention": "❌ 不支持 @全体成员，请直接指定具体用户！"
       }
     },
-    "cave.wipe": {
-      "description": "抹去特定 id 的回声洞信息，支持多个 ID",
+    "cave.drop": {
+      "description": "抹去特定 id 的回声洞信息",
       "messages": {
         "noIdProvided": "❌ 请提供要删除的回声洞消息 ID！",
         "adminOnly": "⛔ 该消息由管理员发布，已开启管理员消息保护，只有管理员可以删除。",
         "permissionDenied": "⛔ 您没有权限删除此消息！只有管理员可以删除。",
         "contributorDeleteDenied": "⛔ 您没有权限删除此消息！当前配置不允许投稿者删除回声洞。",
-        "senderDeleteDenied": "⛔ 您没有权限删除此消息！当前配置不允许原始发送者删除回声洞。",
+        "senderDeleteDenied": "⛔ 您没有权限删除此消息！当前配置不允许原始发送者删除回声洞。"
+      }
+    },
+    "cave.purge": {
+      "description": "抹去多个 id 的回声洞信息",
+      "messages": {
+        "noIdProvided": "❌ 请提供要删除的回声洞消息 ID！",
         "msgDeleted": "✅ 已成功抹去回声洞消息 ID：{0}",
         "msgDeletedMultiple": "✅ 已成功抹去 {0} 条回声洞消息！",
         "msgDeleteFailedAll": "❌ 所有指定的回声洞消息 ID 均删除失败：{0}",

@@ -86,8 +86,12 @@ export function apply(ctx: Context, cfg: Config) {
         async ({ session }, ...userIds) => await addCave(ctx, session, cfg, userIds)
     );
 
-    ctx.command('cave.wipe <...ids:number>').action(
-        async ({ session }, ...ids) => await deleteCave(ctx, session, cfg, ids)
+    ctx.command('cave.drop <id:number>').action(
+        async ({ session }, id) => await deleteCave(ctx, session, cfg, id)
+    );
+
+    ctx.command('cave.purge <...ids:number>').action(
+        async ({ session }, ...ids) => await deleteCaves(ctx, session, cfg, ids)
     );
 
     ctx.command('cave.search <...userIds>').action(
@@ -190,12 +194,68 @@ async function getCave(ctx: Context, session: Session, cfg: Config, id: number) 
     await sendCaveMsg(ctx, session, caveMsg, cfg);
 }
 
-async function deleteCave(ctx: Context, session: Session, cfg: Config, ids: number[]) {
+async function deleteCave(ctx: Context, session: Session, cfg: Config, id: number) {
     if (!session.guildId) {
         return session.text('echo-cave.general.privateChatReminder');
     }
 
-    if (!ids || ids.length === 0) {
+    if (!id) {
+        return session.text('.noIdProvided');
+    }
+
+    const caves = await ctx.database.get('echo_cave', id);
+
+    if (caves.length === 0) {
+        return session.text('echo-cave.general.noMsgWithId');
+    }
+
+    const caveMsg = caves[0];
+    const currentUserId = session.userId;
+    const user = await ctx.database.getUser(session.platform, currentUserId);
+    const userAuthority = user.authority;
+    const isCurrentUserAdmin = userAuthority >= 4;
+
+    if (cfg.adminMessageProtection) {
+        const caveUser = await ctx.database.getUser(session.platform, caveMsg.userId);
+        const isCaveUserAdmin = caveUser.authority >= 4;
+
+        if (isCaveUserAdmin && !isCurrentUserAdmin) {
+            return session.text('.adminOnly');
+        }
+    }
+
+    // Check delete permissions
+    if (!isCurrentUserAdmin) {
+        if (currentUserId === caveMsg.userId) {
+            // Contributor check
+            if (!cfg.allowContributorDelete) {
+                return session.text('.contributorDeleteDenied');
+            }
+        } else if (currentUserId === caveMsg.originUserId) {
+            // Sender check
+            if (!cfg.allowSenderDelete) {
+                return session.text('.senderDeleteDenied');
+            }
+        } else {
+            // Neither contributor nor sender nor admin
+            return session.text('.permissionDenied');
+        }
+    }
+
+    if (cfg.deleteMediaWhenDeletingMsg) {
+        await deleteMediaFilesFromMessage(ctx, caveMsg.content);
+    }
+
+    await ctx.database.remove('echo_cave', id);
+    return session.text('.msgDeleted', [id]);
+}
+
+async function deleteCaves(ctx: Context, session: Session, cfg: Config, ids: number[]) {
+    if (!session.guildId) {
+        return session.text('echo-cave.general.privateChatReminder');
+    }
+
+    if (!ids) {
         return session.text('.noIdProvided');
     }
 
@@ -205,54 +265,47 @@ async function deleteCave(ctx: Context, session: Session, cfg: Config, ids: numb
     const userAuthority = user.authority;
     const isCurrentUserAdmin = userAuthority >= 4;
 
-    for (const id of ids) {
-        try {
-            const caves = await ctx.database.get('echo_cave', id);
+    const caves = await ctx.database.get('echo_cave', ids);
+    for (const cave of caves) {
+        const caveMsg = caves[0];
 
-            if (caves.length === 0) {
-                failedIds.push(id);
+        if (cfg.adminMessageProtection) {
+            const caveUser = await ctx.database.getUser(session.platform, caveMsg.userId);
+            const isCaveUserAdmin = caveUser.authority >= 4;
+
+            if (isCaveUserAdmin && !isCurrentUserAdmin) {
+                failedIds.push(cave.id);
                 continue;
             }
-
-            const caveMsg = caves[0];
-
-            if (cfg.adminMessageProtection) {
-                const caveUser = await ctx.database.getUser(session.platform, caveMsg.userId);
-                const isCaveUserAdmin = caveUser.authority >= 4;
-
-                if (isCaveUserAdmin && !isCurrentUserAdmin) {
-                    failedIds.push(id);
-                    continue;
-                }
-            }
-
-            // Check delete permissions
-            let hasPermission = isCurrentUserAdmin;
-            if (!hasPermission) {
-                if (currentUserId === caveMsg.userId) {
-                    // Contributor check
-                    hasPermission = cfg.allowContributorDelete;
-                } else if (currentUserId === caveMsg.originUserId) {
-                    // Sender check
-                    hasPermission = cfg.allowSenderDelete;
-                }
-            }
-
-            if (!hasPermission) {
-                failedIds.push(id);
-                continue;
-            }
-
-            // 如果配置开启，删除消息中的媒体文件
-            if (cfg.deleteMediaWhenDeletingMsg) {
-                await deleteMediaFilesFromMessage(ctx, caveMsg.content);
-            }
-
-            await ctx.database.remove('echo_cave', id);
-        } catch (error) {
-            failedIds.push(id);
         }
+
+        // Check delete permissions
+        let hasPermission = isCurrentUserAdmin;
+        if (!hasPermission) {
+            if (currentUserId === caveMsg.userId) {
+                // Contributor check
+                hasPermission = cfg.allowContributorDelete;
+            } else if (currentUserId === caveMsg.originUserId) {
+                // Sender check
+                hasPermission = cfg.allowSenderDelete;
+            }
+        }
+
+        if (!hasPermission) {
+            failedIds.push(cave.id);
+            continue;
+        }
+
+        if (cfg.deleteMediaWhenDeletingMsg) {
+            await deleteMediaFilesFromMessage(ctx, caveMsg.content);
+        }
+
+        await ctx.database.remove('echo_cave', cave.id);
     }
+
+    const foundIds = new Set(caves.map(r => r.id))
+    const missingIds = ids.filter(id => !foundIds.has(id))
+    failedIds.push(...missingIds);
 
     if (failedIds.length === 0) {
         return session.text('.msgDeletedMultiple', [ids.length]);
