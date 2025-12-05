@@ -1,3 +1,9 @@
+## [1.19.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.1...v1.19.2) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* delete existing msg detector ([061239e](https://github.com/pynickle/koishi-plugin-echo-cave/commit/061239e9cba16f55e1ef4b662e52cf90d3a3f4d2))
+
 ## [1.19.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.0...v1.19.1) (2025-12-05)
 
 ### 🐛 Bug Fixes
