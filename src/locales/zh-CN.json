@@ -64,7 +64,6 @@
       "description": "将消息存入回声洞",
       "messages": {
         "noMsgQuoted": "💡 请引用一条消息后再使用此命令！",
-        "existingMsg": "♻️ 该消息已存在于回声洞穴中！",
         "msgSaved": "✅ 回声洞消息已成功存入，消息 ID：{0}",
         "msgFailedToSave": "❌ 回声洞保存失败，请稍后重试！"
       }

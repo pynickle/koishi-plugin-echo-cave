@@ -69,12 +69,6 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         content = JSON.stringify(await processMessageContent(ctx, msgJson, cfg));
     }
 
-    await ctx.database.get('echo_cave_v2', { content }).then((existing) => {
-        if (existing) {
-            return session.text('.existingMsg');
-        }
-    });
-
     try {
         const result = await ctx.database.create('echo_cave_v2', {
             channelId,
