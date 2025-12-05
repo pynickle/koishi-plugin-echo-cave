@@ -1,3 +1,9 @@
+## [1.18.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.17.0...v1.18.0) (2025-12-05)
+
+### ✨ Features
+
+* completely restructure the code architecture ([66f45ed](https://github.com/pynickle/koishi-plugin-echo-cave/commit/66f45ed509f3cc0b1b160d8dcabb4e8109737405))
+
 ## [1.17.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.16...v1.17.0) (2025-12-05)
 
 ### ✨ Features
