@@ -1,3 +1,39 @@
+## [1.16.16](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.15...v1.16.16) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* believe ([780a0f8](https://github.com/pynickle/koishi-plugin-echo-cave/commit/780a0f835831e36a15ba2ae4573a110a3be711e8))
+
+## [1.16.15](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.14...v1.16.15) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* l don't understand ([60a38be](https://github.com/pynickle/koishi-plugin-echo-cave/commit/60a38be6a9fcbd01b96a4bc47c430d090c0ba0cd))
+
+## [1.16.14](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.13...v1.16.14) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* l think it's the last fix ([4b42a9a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/4b42a9a1e6deec64a6ec17639d42422782b78b54))
+
+## [1.16.13](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.12...v1.16.13) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* fix ([d7607b1](https://github.com/pynickle/koishi-plugin-echo-cave/commit/d7607b1e44b45d48743da112aad59fa1cffcf35e))
+
+## [1.16.12](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.11...v1.16.12) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* debug ([dd1c1b4](https://github.com/pynickle/koishi-plugin-echo-cave/commit/dd1c1b4ed2435c50797395df1c80292a3a2cc976))
+
+## [1.16.11](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.10...v1.16.11) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* debug ([7b4a7e2](https://github.com/pynickle/koishi-plugin-echo-cave/commit/7b4a7e2507325c54c26e1686d4a75170c7d05a36))
+
 ## [1.16.10](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.9...v1.16.10) (2025-12-05)
 
 ### 🐛 Bug Fixes

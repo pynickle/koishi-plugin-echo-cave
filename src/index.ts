@@ -263,7 +263,7 @@ async function deleteCave(ctx: Context, session: Session, cfg: Config, ids: numb
     }
 }
 
-async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: string[]) {
+async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: any[]) {
     if (!session.guildId) {
         return session.text('echo-cave.general.privateChatReminder');
     }
@@ -284,9 +284,6 @@ async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: st
             return session.text('.invalidAllMention');
         }
         parsedUserIds = result.parsedUserIds;
-
-        // Log parsed userIds for debugging
-        ctx.logger.info(`Parsed userIds in addCave: ${JSON.stringify(parsedUserIds)}`);
 
         // Check if all users belong to the group if userIds are provided (使用调试版本)
         const isAllUsersInGroup = await checkUsersInGroup(ctx, session, parsedUserIds);
@@ -351,7 +348,7 @@ async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: st
     }
 }
 
-async function bindUsersToCave(ctx: Context, session: Session, id: number, userIds: string[]) {
+async function bindUsersToCave(ctx: Context, session: Session, id: number, userIds: any[]) {
     if (!session.guildId) {
         return session.text('echo-cave.general.privateChatReminder');
     }
@@ -372,16 +369,13 @@ async function bindUsersToCave(ctx: Context, session: Session, id: number, userI
     }
     parsedUserIds = result.parsedUserIds;
 
-    // Log parsed userIds for debugging
-    ctx.logger.info(`Parsed userIds: ${JSON.stringify(parsedUserIds)}`);
-
     // Check if cave exists
     const caves = await ctx.database.get('echo_cave', id);
     if (caves.length === 0) {
         return session.text('echo-cave.general.noMsgWithId');
     }
 
-    // Check if all users belong to the group (使用调试版本)
+    // Check if all users belong to the group
     const isAllUsersInGroup = await checkUsersInGroup(ctx, session, parsedUserIds);
     if (!isAllUsersInGroup) {
         return session.text('.userNotInGroup');

@@ -1,4 +1,4 @@
-import { CQCode } from '@pynickle/koishi-plugin-adapter-onebot';
+import { h, Element } from 'koishi';
 
 export interface ParseResult {
     parsedUserIds: string[];
@@ -14,36 +14,27 @@ export function createTextMsg(content: string) {
     };
 }
 
-export function parseUserIds(userIds: string[]): ParseResult {
+export function parseUserIds(userIds: any[]): ParseResult {
     const parsedUserIds: string[] = [];
-    for (const userIdStr of userIds) {
-        try {
-            const cqCode = CQCode.from(userIdStr);
-            if (cqCode.type === 'at') {
-                const qq = cqCode.data.qq;
-                if (qq === 'all') {
-                    return {
-                        parsedUserIds: [],
-                        error: 'invalid_all_mention',
-                    };
-                }
-                if (qq) {
-                    parsedUserIds.push(qq);
-                }
-            } else {
-                // Check if it's a valid number
-                const num = Number(userIdStr);
-                if (!Number.isNaN(num)) {
-                    parsedUserIds.push(String(num));
-                }
+    for (const userId of userIds) {
+        // check if it's a valid number
+        const num = Number(userId);
+        if (!Number.isNaN(num)) {
+            parsedUserIds.push(userId);
+            continue;
+        }
+
+        const element = h.parse(userId);
+
+        if (element.length === 1 && element[0].type === 'at') {
+            const userId = element[0].attrs.id;
+            if (userId === 'all') {
+                return {
+                    parsedUserIds: [],
+                    error: 'invalid_all_mention',
+                };
             }
-        } catch (e) {
-            // If parsing fails, check if it's a valid number
-            /*const num = Number(userIdStr);
-            if (!Number.isNaN(num)) {
-                parsedUserIds.push(String(num));
-            }*/
-            parsedUserIds.push(userIdStr.split(":")[1]);
+            parsedUserIds.push(userId);
         }
     }
     return {
