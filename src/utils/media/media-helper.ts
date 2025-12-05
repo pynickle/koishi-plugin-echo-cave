@@ -1,4 +1,4 @@
-import { Config } from './index';
+import { Config } from '../../config/config';
 import axios from 'axios';
 import { Context } from 'koishi';
 import { promises as fs } from 'node:fs';

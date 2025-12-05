@@ -55,25 +55,9 @@ npm install koishi-plugin-echo-cave
 5. **查看自己的投稿**：发送命令 `cave.listen` 查看自己曾经存入的所有回声洞消息
 6. **查看自己的发言**：发送命令 `cave.trace` 查看自己曾经被他人存入的回声洞消息
 
-## 📁 文件结构
-
-```
-src/
-├── index.ts              # 插件主入口，命令注册和核心功能
-├── cave-helper.ts        # 回声洞消息发送辅助函数
-├── forward-helper.ts     # 转发消息处理辅助函数
-├── media-helper.ts       # 媒体文件保存辅助函数
-├── msg-helper.ts         # 消息发送辅助函数
-├── cqcode-helper.ts      # CQ 码处理辅助函数
-├── onebot-helper.ts      # OneBot 适配器辅助函数
-└── locales/
-    └── zh-CN.json        # 中文语言包
-```
-
 ## 🔧 技术说明
 
 - 插件使用 Koishi 数据库系统存储消息记录
-- 图片会保存在 `data/cave/images` 目录下
 - 支持嵌套转发消息的处理
 - 自动检测重复消息，避免存储重复内容
 - 支持媒体文件大小限制
@@ -82,15 +66,15 @@ src/
 
 ## 🛠️ 配置选项
 
-| 配置项 | 类型 | 默认值 | 说明 |
-|-------|------|-------|------|
+| 配置项                      | 类型      | 默认值     | 说明                            |
+|--------------------------|---------|---------|-------------------------------|
 | `adminMessageProtection` | boolean | `false` | 开启管理员消息保护，使管理员发布的消息只能由其他管理员删除 |
-| `allowContributorDelete` | boolean | `true` | 允许消息投稿者删除自己投稿的消息 |
-| `allowSenderDelete` | boolean | `true` | 允许原始消息发送者删除自己被投稿的消息 |
-| `enableSizeLimit` | boolean | `false` | 启用媒体文件大小限制 |
-| `maxImageSize` | number | `2048` | 最大图片大小（KB） |
-| `maxVideoSize` | number | `512` | 最大视频大小（MB） |
-| `maxFileSize` | number | `512` | 最大文件大小（MB） |
+| `allowContributorDelete` | boolean | `true`  | 允许消息投稿者删除自己投稿的消息              |
+| `allowSenderDelete`      | boolean | `true`  | 允许原始消息发送者删除自己被投稿的消息           |
+| `enableSizeLimit`        | boolean | `false` | 启用媒体文件大小限制                    |
+| `maxImageSize`           | number  | `2048`  | 最大图片大小（KB）                    |
+| `maxVideoSize`           | number  | `512`   | 最大视频大小（MB）                    |
+| `maxFileSize`            | number  | `512`   | 最大文件大小（MB）                    |
 
 ## 📝 注意事项
 

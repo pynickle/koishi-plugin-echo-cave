@@ -1,5 +1,6 @@
-import { Config } from './index';
-import { processMediaElement } from './media-helper';
+import { getUserIdFromNickname } from '../../adapters/onebot/user';
+import { Config } from '../../config/config';
+import { processMediaElement } from '../../utils/media/media-helper';
 import { CQCode } from '@pynickle/koishi-plugin-adapter-onebot';
 import { Message } from '@pynickle/koishi-plugin-adapter-onebot/lib/types';
 import { Context, Session } from 'koishi';
@@ -32,25 +33,6 @@ export async function reconstructForwardMsg(
             };
         })
     );
-}
-
-async function getUserIdFromNickname(
-    session: Session,
-    nickname: string,
-    userId: number
-): Promise<number> {
-    const memberInfos = await session.onebot.getGroupMemberList(session.channelId);
-
-    // 找出所有 nickname 严格匹配的项
-    const matches = memberInfos.filter((m) => m.nickname === nickname);
-
-    // 如果恰好有一个匹配，则返回那个成员的 user_id
-    if (matches.length === 1) {
-        return matches[0].user_id;
-    }
-
-    // 否则（无匹配或多重匹配）返回传入的 userId
-    return userId;
 }
 
 async function processForwardMessageContent(

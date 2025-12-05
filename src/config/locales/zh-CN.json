@@ -1,0 +1,12 @@
+{
+  "adminMessageProtection": "开启管理员消息保护，开启后管理员发布的消息只能由管理员删除",
+  "allowContributorDelete": "允许投稿者删除自己投稿的回声洞",
+  "allowSenderDelete": "允许原始发送者删除被投稿的回声洞",
+  "deleteMediaWhenDeletingMsg": "删除回声洞消息时是否同时删除关联的媒体文件",
+  "enableSizeLimit": "是否启用媒体文件大小限制",
+  "maxImageSize": "最大图片大小 (MB)",
+  "maxVideoSize": "最大视频大小 (MB)",
+  "maxFileSize": "最大文件大小 (MB)",
+  "maxRecordSize": "最大录音大小 (MB)",
+  "useBase64ForMedia": "是否使用 Base64 编码发送媒体文件，开启后将读取 base64 编码发送而不是使用 file uri"
+}

@@ -17,6 +17,10 @@
       "noMsgWithId": "🔍 未找到该 ID 的回声洞消息",
       "noTemplatesConfigured": "❌ 未配置回声洞模板，请先配置模板！"
     },
+    "user": {
+      "invalidAllMention": "❌ 不支持 @全体成员，请直接指定具体用户！",
+      "userNotInGroup": "❌ 提供的用户 ID 不全属于该群组！"
+    },
     "templates": {
       "forward": [
         "🌀 回声洞 #{id}\n\n一则回声从时光中飘来——\n📅 {date} · 来自 @{originName}  \n📮 由 @{userName} 投递",
@@ -62,9 +66,7 @@
         "noMsgQuoted": "💡 请引用一条消息后再使用此命令！",
         "existingMsg": "♻️ 该消息已存在于回声洞穴中！",
         "msgSaved": "✅ 回声洞消息已成功存入，消息 ID：{0}",
-        "msgFailedToSave": "❌ 回声洞保存失败，请稍后重试！",
-        "userNotInGroup": "❌ 提供的用户 ID 不全属于该群组！",
-        "invalidAllMention": "❌ 不支持 @全体成员，请直接指定具体用户！"
+        "msgFailedToSave": "❌ 回声洞保存失败，请稍后重试！"
       }
     },
     "cave.drop": {
@@ -91,8 +93,6 @@
       "description": "搜索与指定用户相关的回声洞",
       "messages": {
         "noUserIdProvided": "❌ 请提供要搜索的用户 ID！",
-        "invalidAllMention": "❌ 不支持 @全体成员，请直接指定具体用户！",
-        "userNotInGroup": "❌ 提供的用户 ID 不全属于该群组！",
         "noValidUserIdProvided": "❌ 未提供有效的用户 ID！",
         "noMatchingCaves": "🔍 未找到与用户 {0} 相关的回声洞消息",
         "searchResult": "🔍 共找到 {0} 条与该用户相关的回声洞消息：\nID 列表：{1}"
@@ -120,9 +120,7 @@
         "noIdProvided": "❌ 请提供要绑定用户的回声洞消息 ID！",
         "noUserIdProvided": "❌ 请提供要绑定的用户 ID！",
         "msgNotFound": "🔍 未找到该 ID 的回声洞消息",
-        "userBoundSuccess": "✅ 已成功将用户绑定到回声洞 #{0}！",
-        "userNotInGroup": "❌ 提供的用户 ID 不全属于该群组！",
-        "invalidAllMention": "❌ 不支持 @全体成员，请直接指定具体用户！"
+        "userBoundSuccess": "✅ 已成功将用户绑定到回声洞 #{0}！"
       }
     }
   }

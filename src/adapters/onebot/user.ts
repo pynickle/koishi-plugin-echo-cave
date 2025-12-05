@@ -1,4 +1,23 @@
-import { Context, Session } from 'koishi';
+﻿import { Context, Session } from 'koishi';
+
+export async function getUserIdFromNickname(
+    session: Session,
+    nickname: string,
+    userId: number
+): Promise<number> {
+    const memberInfos = await session.onebot.getGroupMemberList(session.channelId);
+
+    // 找出所有 nickname 严格匹配的项
+    const matches = memberInfos.filter((m) => m.nickname === nickname);
+
+    // 如果恰好有一个匹配，则返回那个成员的 user_id
+    if (matches.length === 1) {
+        return matches[0].user_id;
+    }
+
+    // 否则（无匹配或多重匹配）返回传入的 userId
+    return userId;
+}
 
 export async function getUserName(ctx: Context, session: Session, userId: string): Promise<string> {
     try {

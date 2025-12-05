@@ -1,7 +1,8 @@
-import { createTextMsg } from './cqcode-helper';
-import { Config, EchoCave } from './index';
-import { convertFileUriToBase64 } from './media-helper';
-import { getUserName } from './onebot-helper';
+import { getUserName } from '../../adapters/onebot/user';
+import { Config } from '../../config/config';
+import { EchoCave } from '../../index';
+import { convertFileUriToBase64 } from '../../utils/media/media-helper';
+import { createTextMsg } from '../../utils/msg/cqcode-helper';
 import { CQCode } from '@pynickle/koishi-plugin-adapter-onebot';
 import { Context, Session } from 'koishi';
 

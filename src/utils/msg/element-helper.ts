@@ -1,20 +1,11 @@
-import { h, Element } from 'koishi';
+﻿import { h } from 'koishi';
 
 export interface ParseResult {
     parsedUserIds: string[];
     error?: string;
 }
 
-export function createTextMsg(content: string) {
-    return {
-        type: 'text',
-        data: {
-            text: content,
-        },
-    };
-}
-
-export function parseUserIds(userIds: any[]): ParseResult {
+export function parseUserIds(userIds: string[] | string): ParseResult {
     const parsedUserIds: string[] = [];
     for (const userId of userIds) {
         // check if it's a valid number
