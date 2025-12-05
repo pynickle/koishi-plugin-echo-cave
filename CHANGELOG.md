@@ -1,3 +1,9 @@
+## [1.19.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.0...v1.19.1) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* fix \n error of default templates ([d918722](https://github.com/pynickle/koishi-plugin-echo-cave/commit/d9187224ac710704a5099cbc00dc66567816fd07))
+
 ## [1.19.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.6...v1.19.0) (2025-12-05)
 
 ### ✨ Features
