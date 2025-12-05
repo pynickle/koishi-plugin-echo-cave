@@ -48,7 +48,13 @@ export async function sendCaveMsg(
 
     const TEMPLATE_COUNT = 5;
 
-    if (caveMsg.type === 'forward') {
+    // Check if content is actually a forward message by looking for node elements
+    const isActualForward = content.some((item) => item.type === 'node');
+    // Determine if we should send as forward message
+    const shouldSendAsForward =
+        cfg.sendAllAsForwardMsg || (caveMsg.type === 'forward' && isActualForward);
+
+    if (shouldSendAsForward) {
         // Get forward templates, filtering out empty ones
         const availableTemplates: string[] = [];
         for (let i = 0; i < TEMPLATE_COUNT; i++) {
@@ -68,7 +74,25 @@ export async function sendCaveMsg(
             availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
 
         await session.onebot.sendGroupMsg(channelId, [createTextMsg(chosenTemplate)]);
-        await session.onebot.sendGroupForwardMsg(channelId, content);
+
+        // If not an actual forward message, convert it to forward message format
+        if (!isActualForward) {
+            // Create a forward message node with the current message
+            const forwardContent = [
+                {
+                    type: 'node',
+                    data: {
+                        user_id: caveMsg.originUserId,
+                        nickname: originName,
+                        content: content,
+                    },
+                },
+            ];
+            await session.onebot.sendGroupForwardMsg(channelId, forwardContent);
+        } else {
+            // Send as is for actual forward messages
+            await session.onebot.sendGroupForwardMsg(channelId, content);
+        }
 
         return;
     }

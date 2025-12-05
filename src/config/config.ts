@@ -1,4 +1,4 @@
-﻿import { Schema } from 'koishi';
+import { Schema } from 'koishi';
 
 export interface Config {
     adminMessageProtection?: boolean;
@@ -11,6 +11,7 @@ export interface Config {
     maxFileSize?: number;
     maxRecordSize?: number;
     useBase64ForMedia?: boolean;
+    sendAllAsForwardMsg?: boolean;
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -24,6 +25,7 @@ export const Config: Schema<Config> = Schema.object({
     maxFileSize: Schema.number().default(512),
     maxRecordSize: Schema.number().default(512),
     useBase64ForMedia: Schema.boolean().default(false),
+    sendAllAsForwardMsg: Schema.boolean().default(false),
 }).i18n({
     'zh-CN': require('./locales/zh-CN.json'),
 });
