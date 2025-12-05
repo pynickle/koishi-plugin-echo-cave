@@ -1,3 +1,13 @@
+## [1.19.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.6...v1.19.0) (2025-12-05)
+
+### ✨ Features
+
+* migrate database ([1f5eed8](https://github.com/pynickle/koishi-plugin-echo-cave/commit/1f5eed8bcc3fb63545bc56f03f87b14d3c4f6cc7))
+
+### 🐛 Bug Fixes
+
+* fix build error ([2d63783](https://github.com/pynickle/koishi-plugin-echo-cave/commit/2d6378392ca4b8732163779f795b8c70de689828))
+
 ## [1.18.6](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.5...v1.18.6) (2025-12-05)
 
 ### 📚 Documentation
