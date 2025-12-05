@@ -17,7 +17,19 @@ export function createTextMsg(content: string) {
 export function parseUserIds(userIds: any[]): ParseResult {
     const parsedUserIds: string[] = [];
     for (const userId of userIds) {
-        if (userId) {}
+        try {
+            const element = h.parse(userId)
+
+            if (element.length === 1 && element[0].type === 'at') {
+                parsedUserIds.push(element[0].attrs. id);
+            }
+        } catch (e) {
+            // If parsing fails, check if it's a valid number
+            const num = Number(userId);
+            if (Number.isNaN(num)) {
+                parsedUserIds.push(userId);
+            }
+        }
         /*
         try {
             const cqCode = (userIdStr);
