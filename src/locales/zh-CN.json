@@ -31,23 +31,23 @@
       ],
       "msg": [
         {
-          "prefix": "🌀 回声洞 #{id}\n\n—— 有人留下了声音 ——\n\n",
+          "prefix": "🌀 回声洞 #{id}\n\n—— 有人留下了声音 ——{nl}",
           "suffix": "📅 {date} · 来自 @{originName}\n📮 由 @{userName} 投递"
         },
         {
-          "prefix": "🌀 回声洞 #{id}\n───────────────\n",
+          "prefix": "🌀 回声洞 #{id}\n───────────────",
           "suffix": "───────────────\n📅 {date}\n👤 {originName} · 由 @{userName} 投递"
         },
         {
-          "prefix": "🌀 回声洞 #{id}\n\n💭「有人在洞壁留下印记」\n\n",
+          "prefix": "🌀 回声洞 #{id}\n\n💭「有人在洞壁留下印记」{nl}",
           "suffix": "📅 {date}\n📮 {userName} 记录"
         },
         {
-          "prefix": "🌀 回声洞 #{id}\n\n— 回声开始 —\n\n",
+          "prefix": "🌀 回声洞 #{id}\n\n— 回声开始 —{nl}",
           "suffix": "— 回声结束 —\n📅 {date} · @{originName}\n📮 @{userName}"
         },
         {
-          "prefix": "🌀 回声洞 #{id}\n\n",
+          "prefix": "🌀 回声洞 #{id}{nl}",
           "suffix": "📅 {date}\n来自 @{originName}\n由 @{userName} 投递"
         }
       ]

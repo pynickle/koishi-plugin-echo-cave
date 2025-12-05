@@ -95,7 +95,7 @@ export async function sendCaveMsg(
     const last = content.at(-1);
     const needsNewline = last?.type === 'text';
 
-    content.unshift(createTextMsg(chosenTemplate.prefix));
+    content.unshift(createTextMsg(chosenTemplate.prefix + '\n'));
     content.push(createTextMsg(`${needsNewline ? '\n\n' : ''}${chosenTemplate.suffix}`));
 
     await session.onebot.sendGroupMsg(channelId, content);
