@@ -21,14 +21,13 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
     // Parse userIds to handle @mentions
     let parsedUserIds: string[] = [];
     if (userIds && userIds.length > 0) {
-        ctx.logger.info(`Original userIds in addCave: ${JSON.stringify(userIds)}`);
         const result = parseUserIds(userIds);
         if (result.error === 'invalid_all_mention') {
             return session.text('echo-cave.user.invalidAllMention');
         }
         parsedUserIds = result.parsedUserIds;
 
-        // Check if all users belong to the group if userIds are provided (使用调试版本)
+        // Check if all users belong to the group if userIds are provided
         const isAllUsersInGroup = await checkUsersInGroup(ctx, session, parsedUserIds);
         if (!isAllUsersInGroup) {
             return session.text('.userNotInGroup');

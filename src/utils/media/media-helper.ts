@@ -61,7 +61,7 @@ export async function saveMedia(
                 ctx.logger.warn(`Invalid record content-type: ${contentType}`);
                 return mediaUrl;
             }
-            // 对于 file 类型，不严格检查 content-type
+            // For file type, don't strictly check content-type
         }
 
         const buffer = Buffer.from(res.data);
@@ -76,7 +76,7 @@ export async function saveMedia(
             `${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully: ${fullMediaPath}`
         );
 
-        // 保存完成后检查并清理媒体文件
+        // Check and clean media files after saving
         await checkAndCleanMediaFiles(ctx, cfg, type);
 
         return fullMediaPath;
@@ -159,13 +159,13 @@ export async function convertFileUriToBase64(ctx: Context, element: any): Promis
     return element;
 }
 
-// 检查并清理媒体文件，确保不超过配置的大小限制
+// Check and clean up media files to ensure they don't exceed the configured size limit
 export async function checkAndCleanMediaFiles(
     ctx: Context,
     cfg: Config,
     type: 'image' | 'video' | 'file' | 'record'
 ) {
-    // 如果未启用大小限制，直接返回
+    // If size limit is not enabled, return directly
     if (!cfg.enableSizeLimit) {
         return;
     }
@@ -174,7 +174,7 @@ export async function checkAndCleanMediaFiles(
     const maxSize = (() => {
         switch (type) {
             case 'image':
-                return (cfg.maxImageSize || 100) * 1024 * 1024; // 转换为字节
+                return (cfg.maxImageSize || 100) * 1024 * 1024; // Convert to bytes
             case 'video':
                 return (cfg.maxVideoSize || 500) * 1024 * 1024;
             case 'file':
@@ -185,13 +185,13 @@ export async function checkAndCleanMediaFiles(
     })();
 
     try {
-        // 获取目录中的所有文件
+        // Get all files in the directory
         const files = await fs.readdir(mediaDir);
         if (files.length === 0) {
             return;
         }
 
-        // 获取文件信息（路径、大小、创建时间）
+        // Get file information (path, size, creation time)
         const fileInfos = await Promise.all(
             files.map(async (file) => {
                 const filePath = path.join(mediaDir, file);
@@ -204,25 +204,25 @@ export async function checkAndCleanMediaFiles(
             })
         );
 
-        // 计算总大小
+        // Calculate total size
         const totalSize = fileInfos.reduce((sum, file) => sum + file.size, 0);
         ctx.logger.info(
             `${type} directory total size: ${(totalSize / (1024 * 1024)).toFixed(2)} MB, max allowed: ${(maxSize / (1024 * 1024)).toFixed(2)} MB`
         );
 
-        // 如果总大小超过限制，删除最早的文件
+        // If total size exceeds limit, delete the oldest files
         if (totalSize > maxSize) {
             ctx.logger.warn(
                 `${type} directory size exceeds limit! Total: ${(totalSize / (1024 * 1024)).toFixed(2)} MB, Max: ${(maxSize / (1024 * 1024)).toFixed(2)} MB`
             );
 
-            // 按修改时间排序，最早的文件排在前面
+            // Sort by modification time, oldest files first
             fileInfos.sort((a, b) => a.mtime - b.mtime);
 
             let currentSize = totalSize;
             let filesToDelete = [];
 
-            // 计算需要删除的文件
+            // Calculate which files to delete
             for (const file of fileInfos) {
                 if (currentSize <= maxSize) {
                     break;
@@ -231,7 +231,7 @@ export async function checkAndCleanMediaFiles(
                 currentSize -= file.size;
             }
 
-            // 删除文件
+            // Delete files
             for (const file of filesToDelete) {
                 await fs.unlink(file.path);
                 ctx.logger.info(
@@ -248,7 +248,7 @@ export async function checkAndCleanMediaFiles(
     }
 }
 
-// 删除消息中包含的媒体文件
+// Delete media files contained in messages
 export async function deleteMediaFilesFromMessage(ctx: Context, content: string) {
     try {
         const elements = JSON.parse(content);
@@ -263,10 +263,10 @@ export async function deleteMediaFilesFromMessage(ctx: Context, content: string)
             ) {
                 const fileUri = element.data?.file;
                 if (fileUri && fileUri.startsWith('file:///')) {
-                    // 提取本地文件路径
+                    // Extract local file path
                     const filePath = decodeURIComponent(fileUri.replace('file:///', ''));
 
-                    // 检查文件是否存在并删除
+                    // Check if file exists and delete it
                     try {
                         await fs.access(filePath);
                         await fs.unlink(filePath);

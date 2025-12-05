@@ -1,4 +1,4 @@
-﻿import { Context, Session } from 'koishi';
+import { Context, Session } from 'koishi';
 
 export async function getUserIdFromNickname(
     session: Session,
@@ -7,15 +7,15 @@ export async function getUserIdFromNickname(
 ): Promise<number> {
     const memberInfos = await session.onebot.getGroupMemberList(session.channelId);
 
-    // 找出所有 nickname 严格匹配的项
+    // Find all items with exact nickname match
     const matches = memberInfos.filter((m) => m.nickname === nickname);
 
-    // 如果恰好有一个匹配，则返回那个成员的 user_id
+    // If there's exactly one match, return that member's user_id
     if (matches.length === 1) {
         return matches[0].user_id;
     }
 
-    // 否则（无匹配或多重匹配）返回传入的 userId
+    // Otherwise (no match or multiple matches), return the original userId
     return userId;
 }
 
@@ -30,7 +30,7 @@ export async function getUserName(ctx: Context, session: Session, userId: string
 }
 
 /**
- * 检查用户是否属于指定群组
+ * Check if users belong to the specified group
  */
 export async function checkUsersInGroup(
     ctx: Context,
@@ -41,7 +41,7 @@ export async function checkUsersInGroup(
         const groupMembers = await session.onebot.getGroupMemberList(session.channelId);
         const memberIds = groupMembers.map((member) => member.user_id.toString());
 
-        // 检查所有用户 ID 是否都在群组中
+        // Check if all user IDs are in the group
         return userIds.every((userId) => memberIds.includes(userId));
     } catch (error) {
         ctx.logger.warn(`Failed to get group member list:`, error);

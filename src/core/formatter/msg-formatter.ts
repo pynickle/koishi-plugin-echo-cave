@@ -22,12 +22,12 @@ export async function sendCaveMsg(
         );
     }
 
-    // 格式化必要信息
+    // Format necessary information
     const date = formatDate(caveMsg.createTime);
     const originName = await getUserName(ctx, session, caveMsg.originUserId);
     const userName = await getUserName(ctx, session, caveMsg.userId);
 
-    // 格式化关联用户
+    // Format related users
     let relatedUsersFormatted = originName;
     if (caveMsg.relatedUsers && caveMsg.relatedUsers.length > 0) {
         const relatedUserNames = await Promise.all(
@@ -36,7 +36,7 @@ export async function sendCaveMsg(
         relatedUsersFormatted = relatedUserNames.join(', ');
     }
 
-    // 模板数据
+    // Template data
     const templateData = {
         id: caveMsg.id.toString(),
         date,
@@ -49,7 +49,7 @@ export async function sendCaveMsg(
     const TEMPLATE_COUNT = 5;
 
     if (caveMsg.type === 'forward') {
-        // 获取 forward 模板，过滤掉空模板
+        // Get forward templates, filtering out empty ones
         const availableTemplates: string[] = [];
         for (let i = 0; i < TEMPLATE_COUNT; i++) {
             const template = session.text(`echo-cave.templates.forward.${i}`, templateData);
@@ -63,7 +63,7 @@ export async function sendCaveMsg(
             return;
         }
 
-        // 随机选择一个模板
+        // Randomly select a template
         const chosenTemplate =
             availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
 
@@ -73,7 +73,7 @@ export async function sendCaveMsg(
         return;
     }
 
-    // 获取 msg 模板，过滤掉空模板
+    // Get msg templates, filtering out empty ones
     const availableTemplates: Array<{ prefix: string; suffix: string }> = [];
     for (let i = 0; i < TEMPLATE_COUNT; i++) {
         const prefix = session.text(`echo-cave.templates.msg.${i}.prefix`, templateData);
@@ -88,7 +88,7 @@ export async function sendCaveMsg(
         return;
     }
 
-    // 随机选择一个模板
+    // Randomly select a template
     const chosenTemplate =
         availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
 
