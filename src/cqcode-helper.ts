@@ -1,4 +1,4 @@
-import { CQCode } from '@pynickle/koishi-plugin-adapter-onebot';
+import { h, Element } from 'koishi';
 
 export interface ParseResult {
     parsedUserIds: string[];
@@ -14,11 +14,13 @@ export function createTextMsg(content: string) {
     };
 }
 
-export function parseUserIds(userIds: string[]): ParseResult {
+export function parseUserIds(userIds: any[]): ParseResult {
     const parsedUserIds: string[] = [];
-    for (const userIdStr of userIds) {
+    for (const userId of userIds) {
+        if (userId) {}
+        /*
         try {
-            const cqCode = CQCode.from(userIdStr);
+            const cqCode = (userIdStr);
             if (cqCode.type === 'at') {
                 const qq = cqCode.data.qq;
                 if (qq === 'all') {
@@ -39,12 +41,13 @@ export function parseUserIds(userIds: string[]): ParseResult {
             }
         } catch (e) {
             // If parsing fails, check if it's a valid number
-            /*const num = Number(userIdStr);
+            const num = Number(userIdStr);
             if (!Number.isNaN(num)) {
                 parsedUserIds.push(String(num));
-            }*/
-            parsedUserIds.push(userIdStr.split(":")[1]);
+            }
         }
+
+         */
     }
     return {
         parsedUserIds,

@@ -82,11 +82,8 @@ export function apply(ctx: Context, cfg: Config) {
         async ({ session }, id) => await getCave(ctx, session, cfg, id)
     );
 
-    ctx.command('cave.echo [userIds:text]').action(
-        async ({ session }, userIds) => {
-            ctx.logger.info(`User ${session.userId} is adding a cave message with related users: ${userIds}`);
-            // await addCave(ctx, session, cfg, userIds)
-        }
+    ctx.command('cave.echo [...userIds]').action(
+        async ({ session }, ...userIds) => await addCave(ctx, session, cfg, userIds)
     );
 
     ctx.command('cave.wipe <id:number>').action(
@@ -102,6 +99,10 @@ export function apply(ctx: Context, cfg: Config) {
     ctx.command('cave.bind <id:number> <...userIds>', { authority: 4 }).action(
         async ({ session }, id, ...userIds) => {
             ctx.logger.info(`Binding users ${JSON.stringify(userIds)} to cave ID ${id}`);
+            for (const uid of userIds) {
+                ctx.logger.info(`User ID to bind: ${uid}`);
+                ctx.logger.info(`userid type: ${typeof uid}`);
+            }
             await bindUsersToCave(ctx, session, id, userIds)
         }
     );
@@ -249,7 +250,7 @@ async function deleteCave(ctx: Context, session: Session, cfg: Config, id: numbe
     return session.text('.msgDeleted', [id]);
 }
 
-async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: string[]) {
+async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: any[]) {
     if (!session.guildId) {
         return session.text('echo-cave.general.privateChatReminder');
     }
@@ -270,9 +271,6 @@ async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: st
             return session.text('.invalidAllMention');
         }
         parsedUserIds = result.parsedUserIds;
-
-        // Log parsed userIds for debugging
-        ctx.logger.info(`Parsed userIds in addCave: ${JSON.stringify(parsedUserIds)}`);
 
         // Check if all users belong to the group if userIds are provided (使用调试版本)
         const isAllUsersInGroup = await checkUsersInGroup(ctx, session, parsedUserIds);
@@ -337,7 +335,7 @@ async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: st
     }
 }
 
-async function bindUsersToCave(ctx: Context, session: Session, id: number, userIds: string[]) {
+async function bindUsersToCave(ctx: Context, session: Session, id: number, userIds: any[]) {
     if (!session.guildId) {
         return session.text('echo-cave.general.privateChatReminder');
     }
@@ -357,9 +355,6 @@ async function bindUsersToCave(ctx: Context, session: Session, id: number, userI
         return session.text('.invalidAllMention');
     }
     parsedUserIds = result.parsedUserIds;
-
-    // Log parsed userIds for debugging
-    ctx.logger.info(`Parsed userIds: ${JSON.stringify(parsedUserIds)}`);
 
     // Check if cave exists
     const caves = await ctx.database.get('echo_cave', id);
