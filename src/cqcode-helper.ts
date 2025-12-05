@@ -33,7 +33,7 @@ export function parseUserIds(userIds: any[]): ParseResult {
         } catch (e) {
             // If parsing fails, check if it's a valid number
             const num = Number(userId);
-            if (Number.isNaN(num)) {
+            if (!Number.isNaN(num)) {
                 parsedUserIds.push(userId);
             }
         }
