@@ -1,3 +1,13 @@
+## [1.17.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.16...v1.17.0) (2025-12-05)
+
+### ✨ Features
+
+* 增强cave.wipe命令和新增cave.search命令 ([d7be3e5](https://github.com/pynickle/koishi-plugin-echo-cave/commit/d7be3e521bd5563c34362e529a9644b49d5d090e))
+
+### 🚀 Improvements
+
+* use separated command for multiple and single cave deletion ([c107830](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c1078309fede7137a9a39a288c247eea9008dc14))
+
 ## [1.16.16](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.15...v1.16.16) (2025-12-05)
 
 ### 🐛 Bug Fixes
