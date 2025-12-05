@@ -1,3 +1,9 @@
+## [1.19.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.2...v1.19.3) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* fix forward msg not use base64 ([0e974d5](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0e974d5b1de67b9cf4201e4c9092d11c3f46f54f))
+
 ## [1.19.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.1...v1.19.2) (2025-12-05)
 
 ### 🐛 Bug Fixes
