@@ -75,7 +75,7 @@ export function apply(ctx: Context, cfg: Config) {
     );
 
     // Search Cave
-    ctx.command('cave.search <id:number>').action(
+    ctx.command('cave.search <id>').action(
         async ({ session }, id) => await searchCave(ctx, session, id)
     );
 

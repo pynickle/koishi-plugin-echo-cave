@@ -7,7 +7,7 @@ export interface ParseResult {
 
 export function parseUserIds(userIds: string[] | string): ParseResult {
     const parsedUserIds: string[] = [];
-    for (const userId of userIds) {
+    for (const userId of (typeof userIds === 'string' ? [userIds] : userIds)) {
         // check if it's a valid number
         const num = Number(userId);
         if (!Number.isNaN(num)) {

@@ -2,7 +2,7 @@ import { checkUsersInGroup } from '../../adapters/onebot/user';
 import { parseUserIds } from '../../utils/msg/element-helper';
 import { Context, Session, $ } from 'koishi';
 
-export async function searchCave(ctx: Context, session: Session, userIds: number) {
+export async function searchCave(ctx: Context, session: Session, userIds: string) {
     if (!session.guildId) {
         return session.text('echo-cave.general.privateChatReminder');
     }
@@ -12,7 +12,7 @@ export async function searchCave(ctx: Context, session: Session, userIds: number
     }
 
     // Parse userIds to handle @mentions
-    const result = parseUserIds(userIds.toString());
+    const result = parseUserIds(userIds);
     if (result.error === 'invalid_all_mention') {
         return session.text('echo-cave.user.invalidAllMention');
     }
