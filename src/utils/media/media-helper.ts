@@ -155,6 +155,22 @@ export async function convertFileUriToBase64(ctx: Context, element: any): Promis
             ctx.logger.error(`Failed to convert ${element.type} to base64: ${err}`);
             return element; // Return original element if conversion fails
         }
+    } else if (element.type === 'node') {
+        // Handle node type, which contains an array of content elements
+        const processedContent = await Promise.all(
+            element.data.content.map(async (contentElement: any) => {
+                // Recursively convert any media elements in the content array
+                return await convertFileUriToBase64(ctx, contentElement);
+            })
+        );
+
+        return {
+            ...element,
+            data: {
+                ...element.data,
+                content: processedContent,
+            },
+        };
     }
     return element;
 }
@@ -250,32 +266,41 @@ export async function checkAndCleanMediaFiles(
 
 // Delete media files contained in messages
 export async function deleteMediaFilesFromMessage(ctx: Context, content: string) {
+    async function processElement(element: any) {
+        if (
+            element.type === 'image' ||
+            element.type === 'video' ||
+            element.type === 'file' ||
+            element.type === 'record'
+        ) {
+            const fileUri = element.data?.file;
+            if (fileUri && fileUri.startsWith('file:///')) {
+                // Extract local file path
+                const filePath = decodeURIComponent(fileUri.replace('file:///', ''));
+
+                // Check if file exists and delete it
+                try {
+                    await fs.access(filePath);
+                    await fs.unlink(filePath);
+                    ctx.logger.info(`Deleted media file: ${filePath}`);
+                } catch (err) {
+                    ctx.logger.warn(`Failed to delete media file: ${filePath}, error: ${err}`);
+                }
+            }
+        } else if (element.type === 'node' && element.data?.content) {
+            // Recursively process content elements in node type
+            for (const contentElement of element.data.content) {
+                await processElement(contentElement);
+            }
+        }
+    }
+
     try {
         const elements = JSON.parse(content);
         const mediaElements = Array.isArray(elements) ? elements : [elements];
 
         for (const element of mediaElements) {
-            if (
-                element.type === 'image' ||
-                element.type === 'video' ||
-                element.type === 'file' ||
-                element.type === 'record'
-            ) {
-                const fileUri = element.data?.file;
-                if (fileUri && fileUri.startsWith('file:///')) {
-                    // Extract local file path
-                    const filePath = decodeURIComponent(fileUri.replace('file:///', ''));
-
-                    // Check if file exists and delete it
-                    try {
-                        await fs.access(filePath);
-                        await fs.unlink(filePath);
-                        ctx.logger.info(`Deleted media file: ${filePath}`);
-                    } catch (err) {
-                        ctx.logger.warn(`Failed to delete media file: ${filePath}, error: ${err}`);
-                    }
-                }
-            }
+            await processElement(element);
         }
     } catch (err) {
         ctx.logger.error(`Failed to parse message content when deleting media: ${err}`);
