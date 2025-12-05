@@ -31,11 +31,12 @@ export async function searchCave(ctx: Context, session: Session, userIds: string
     const targetUserId = parsedUserIds[0];
     const { channelId } = session;
 
-    const matchingCaves = await ctx.database.get('echo_cave', (row) =>
-        $.and(
-            $.eq(row.channelId, channelId),
-            $.or($.eq(row.originUserId, targetUserId), $.in(targetUserId, row.relatedUsers))
-        )
+    const caves = await ctx.database.get('echo_cave', {
+        channelId,
+    });
+
+    const matchingCaves = caves.filter(
+        (cave) => cave.originUserId === targetUserId || cave.relatedUsers.includes(targetUserId)
     );
 
     if (matchingCaves.length === 0) {
