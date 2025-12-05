@@ -45,10 +45,6 @@
       "release": "patch"
     },
     {
-      "type": "style",
-      "release": "patch"
-    },
-    {
       "type": "imp",
       "release": "patch"
     },

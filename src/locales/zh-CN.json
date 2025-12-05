@@ -103,16 +103,14 @@
       "description": "获得由自己投稿的回声洞列表",
       "messages": {
         "noMsgContributed": "🚀 您在回声洞中暂无投稿，快使用 \"cave.echo\" 命令添加第一条消息吧！",
-        "msgListHeader": "📜 您在本频道投稿的回声洞消息列表：",
-        "msgListItem": "ID: {0} | 创建时间：{1}"
+        "msgListHeader": "📜 您在本频道投稿的回声洞消息列表："
       }
     },
     "cave.trace": {
       "description": "获得自己发言的回声洞列表",
       "messages": {
         "noMsgTraced": "🚀 您在回声洞中暂无发言被投稿，快使用 \"cave.echo\" 命令添加第一条消息吧！",
-        "msgListHeader": "📜 您在本频道发言的回声洞消息列表：",
-        "msgListItem": "ID: {0} | 创建时间：{1}"
+        "msgListHeader": "📜 您在本频道发言的回声洞消息列表："
       }
     },
     "cave.bind": {

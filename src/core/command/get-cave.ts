@@ -10,22 +10,21 @@ export async function getCaveListByUser(ctx: Context, session: Session) {
 
     const { userId, channelId } = session;
 
-    const caves = await ctx.database.get('echo_cave', {
-        userId,
-        channelId,
-    });
+    const caves = await ctx.database.get(
+        'echo_cave',
+        {
+            userId,
+            channelId,
+        },
+        ['id']
+    );
 
     if (caves.length === 0) {
         return session.text('.noMsgContributed');
     }
 
-    let response = session.text('.msgListHeader') + '\n';
-
-    for (const cave of caves) {
-        response += session.text('.msgListItem', [cave.id, formatDate(cave.createTime)]) + '\n';
-    }
-
-    return response;
+    const ids = caves.map((cave) => cave.id).join(' | ');
+    return session.text('.msgListHeader') + '\n' + ids;
 }
 
 export async function getCaveListByOriginUser(ctx: Context, session: Session) {
@@ -35,22 +34,21 @@ export async function getCaveListByOriginUser(ctx: Context, session: Session) {
 
     const { userId, channelId } = session;
 
-    const caves = await ctx.database.get('echo_cave', {
-        originUserId: userId,
-        channelId,
-    });
+    const caves = await ctx.database.get(
+        'echo_cave',
+        {
+            originUserId: userId,
+            channelId,
+        },
+        ['id']
+    );
 
     if (caves.length === 0) {
         return session.text('.noMsgTraced');
     }
 
-    let response = session.text('.msgListHeader') + '\n';
-
-    for (const cave of caves) {
-        response += session.text('.msgListItem', [cave.id, formatDate(cave.createTime)]) + '\n';
-    }
-
-    return response;
+    const ids = caves.map((cave) => cave.id).join(' | ');
+    return session.text('.msgListHeader') + '\n' + ids;
 }
 
 export async function getCave(ctx: Context, session: Session, cfg: Config, id: number) {

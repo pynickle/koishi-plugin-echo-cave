@@ -27,10 +27,12 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         }
         parsedUserIds = result.parsedUserIds;
 
-        // Check if all users belong to the group if userIds are provided
-        const isAllUsersInGroup = await checkUsersInGroup(ctx, session, parsedUserIds);
-        if (!isAllUsersInGroup) {
-            return session.text('.userNotInGroup');
+        if (parsedUserIds.length > 0) {
+            // Check if all users belong to the group if userIds are provided
+            const isAllUsersInGroup = await checkUsersInGroup(ctx, session, parsedUserIds);
+            if (!isAllUsersInGroup) {
+                return session.text('echo-cave.user.userNotInGroup');
+            }
         }
     }
 
