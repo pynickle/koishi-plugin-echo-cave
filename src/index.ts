@@ -98,12 +98,7 @@ export function apply(ctx: Context, cfg: Config) {
 
     ctx.command('cave.bind <id:number> <...userIds>', { authority: 4 }).action(
         async ({ session }, id, ...userIds) => {
-            ctx.logger.info(`Binding users ${JSON.stringify(userIds)} to cave ID ${id}`);
-            for (const uid of userIds) {
-                ctx.logger.info(`User ID to bind: ${uid}`);
-                ctx.logger.info(`userid type: ${typeof uid}`);
-            }
-            await bindUsersToCave(ctx, session, id, userIds)
+            await bindUsersToCave(ctx, session, id, userIds);
         }
     );
 }
