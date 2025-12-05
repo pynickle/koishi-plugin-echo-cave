@@ -11,7 +11,7 @@ export async function getCaveListByUser(ctx: Context, session: Session) {
     const { userId, channelId } = session;
 
     const caves = await ctx.database.get(
-        "'cho_cave_v2',
+        'echo_cave_v2',
         {
             userId,
             channelId,
@@ -35,7 +35,7 @@ export async function getCaveListByOriginUser(ctx: Context, session: Session) {
     const { userId, channelId } = session;
 
     const caves = await ctx.database.get(
-        "'cho_cave_v2',
+        'echo_cave_v2',
         {
             originUserId: userId,
             channelId,
@@ -61,7 +61,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
     const { channelId } = session;
 
     if (!id) {
-        const caves = await ctx.database.get("'cho_cave_v2', {
+        const caves = await ctx.database.get('echo_cave_v2', {
             channelId,
         });
 
@@ -71,7 +71,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
 
         caveMsg = caves[Math.floor(Math.random() * caves.length)];
     } else {
-        const caves = await ctx.database.get("'cho_cave_v2', {
+        const caves = await ctx.database.get('echo_cave_v2', {
             id,
             channelId,
         });

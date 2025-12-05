@@ -32,7 +32,7 @@ export async function bindUsersToCave(
     }
 
     // Check if cave exists
-    const caves = await ctx.database.get("'cho_cave_v2', id);
+    const caves = await ctx.database.get('echo_cave_v2', id);
     if (caves.length === 0) {
         return session.text('echo-cave.general.noMsgWithId');
     }
@@ -44,7 +44,7 @@ export async function bindUsersToCave(
     }
 
     // Update cave with new related users (direct modification)
-    await ctx.database.set("'cho_cave_v2', id, {
+    await ctx.database.set('echo_cave_v2', id, {
         relatedUsers: parsedUserIds,
     });
 

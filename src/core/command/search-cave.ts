@@ -31,7 +31,7 @@ export async function searchCave(ctx: Context, session: Session, userIds: string
     const targetUserId = parsedUserIds[0];
     const { channelId } = session;
 
-    const caves = await ctx.database.get("'cho_cave_v2', {
+    const caves = await ctx.database.get('echo_cave_v2', {
         channelId,
     });
 
