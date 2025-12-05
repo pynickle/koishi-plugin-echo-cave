@@ -1,3 +1,9 @@
+## [1.18.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.3...v1.18.4) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* fix config not shown ([b05518d](https://github.com/pynickle/koishi-plugin-echo-cave/commit/b05518dff8391df5a3372240d226b6f358b2cdb9))
+
 ## [1.18.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.2...v1.18.3) (2025-12-05)
 
 ### 🐛 Bug Fixes
