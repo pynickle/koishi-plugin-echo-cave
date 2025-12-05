@@ -1,3 +1,9 @@
+## [1.20.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.3...v1.20.0) (2025-12-05)
+
+### ✨ Features
+
+* add option for sending all msg as forward ([f60b22f](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f60b22f52b6ccb43a7ee0f68a55cd8a08b7319f8))
+
 ## [1.19.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.2...v1.19.3) (2025-12-05)
 
 ### 🐛 Bug Fixes
