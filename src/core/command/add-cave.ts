@@ -20,6 +20,7 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
 
     // Parse userIds to handle @mentions
     let parsedUserIds: string[] = [];
+    userIds.pop();
     if (userIds && userIds.length > 0) {
         const result = parseUserIds(userIds);
         if (result.error === 'invalid_all_mention') {
@@ -69,14 +70,14 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         content = JSON.stringify(await processMessageContent(ctx, msgJson, cfg));
     }
 
-    await ctx.database.get('echo_cave', { content }).then((existing) => {
+    await ctx.database.get("'cho_cave_v2', { content }).then((existing) => {
         if (existing) {
             return session.text('.existingMsg');
         }
     });
 
     try {
-        const result = await ctx.database.create('echo_cave', {
+        const result = await ctx.database.create("'cho_cave_v2', {
             channelId,
             createTime: new Date(),
             userId,

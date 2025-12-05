@@ -11,7 +11,7 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
         return session.text('.noIdProvided');
     }
 
-    const caves = await ctx.database.get('echo_cave', id);
+    const caves = await ctx.database.get("'cho_cave_v2', id);
 
     if (caves.length === 0) {
         return session.text('echo-cave.general.noMsgWithId');
@@ -54,7 +54,7 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
         await deleteMediaFilesFromMessage(ctx, caveMsg.content);
     }
 
-    await ctx.database.remove('echo_cave', id);
+    await ctx.database.remove("'cho_cave_v2', id);
     return session.text('.msgDeleted', [id]);
 }
 
@@ -73,7 +73,7 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
     const userAuthority = user.authority;
     const isCurrentUserAdmin = userAuthority >= 4;
 
-    const caves = await ctx.database.get('echo_cave', ids);
+    const caves = await ctx.database.get("'cho_cave_v2', ids);
     for (const cave of caves) {
         const caveMsg = caves[0];
 
@@ -108,7 +108,7 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
             await deleteMediaFilesFromMessage(ctx, caveMsg.content);
         }
 
-        await ctx.database.remove('echo_cave', cave.id);
+        await ctx.database.remove("'cho_cave_v2', cave.id);
     }
 
     const foundIds = new Set(caves.map((r) => r.id));

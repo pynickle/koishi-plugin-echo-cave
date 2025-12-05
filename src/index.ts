@@ -27,6 +27,7 @@ export interface EchoCave {
 declare module 'koishi' {
     interface Tables {
         echo_cave: EchoCave;
+        echo_cave_v2: EchoCave;
     }
 }
 
@@ -48,6 +49,35 @@ export function apply(ctx: Context, cfg: Config) {
         {
             primary: 'id',
             autoInc: true,
+        }
+    );
+
+    ctx.model.extend(
+        'echo_cave_v2',
+        {
+            id: 'unsigned',
+            channelId: 'string',
+            createTime: 'timestamp',
+            userId: 'string',
+            originUserId: 'string',
+            type: 'string',
+            content: 'text',
+            relatedUsers: 'list',
+        },
+        {
+            primary: 'id',
+            autoInc: true,
+        }
+    );
+
+    ctx.model.migrate(
+        'echo_cave',
+        {
+            id: 'unsigned',
+        },
+        async (database) => {
+            const data = await database.get('echo_cave', {});
+            await database.upsert('echo_cave_v2', data);
         }
     );
 
