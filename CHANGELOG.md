@@ -1,3 +1,13 @@
+## [1.18.6](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.5...v1.18.6) (2025-12-05)
+
+### 📚 Documentation
+
+* update document ([46d1012](https://github.com/pynickle/koishi-plugin-echo-cave/commit/46d10123e3e10307c5e62bd0984b7e1aa308fb7a))
+
+### 🚀 Improvements
+
+* improve listen and trace ([44ba008](https://github.com/pynickle/koishi-plugin-echo-cave/commit/44ba008c7312d7b547a1e3a303957e0db9e83d17))
+
 ## [1.18.5](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.4...v1.18.5) (2025-12-05)
 
 ### 💄 Style Improvements
