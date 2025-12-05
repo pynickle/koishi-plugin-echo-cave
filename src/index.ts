@@ -82,8 +82,11 @@ export function apply(ctx: Context, cfg: Config) {
         async ({ session }, id) => await getCave(ctx, session, cfg, id)
     );
 
-    ctx.command('cave.echo [...userIds]').action(
-        async ({ session }, ...userIds) => await addCave(ctx, session, cfg, userIds)
+    ctx.command('cave.echo [userIds:text]').action(
+        async ({ session }, userIds) => {
+            ctx.logger.info(`User ${session.userId} is adding a cave message with related users: ${userIds}`);
+            // await addCave(ctx, session, cfg, userIds)
+        }
     );
 
     ctx.command('cave.wipe <id:number>').action(
@@ -97,7 +100,10 @@ export function apply(ctx: Context, cfg: Config) {
     );
 
     ctx.command('cave.bind <id:number> <...userIds>', { authority: 4 }).action(
-        async ({ session }, id, ...userIds) => await bindUsersToCave(ctx, session, id, userIds)
+        async ({ session }, id, ...userIds) => {
+            ctx.logger.info(`Binding users ${JSON.stringify(userIds)} to cave ID ${id}`);
+            await bindUsersToCave(ctx, session, id, userIds)
+        }
     );
 }
 
