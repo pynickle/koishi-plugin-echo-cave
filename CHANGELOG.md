@@ -1,3 +1,9 @@
+## [1.18.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.1...v1.18.2) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* fix search argument error ([a106a6c](https://github.com/pynickle/koishi-plugin-echo-cave/commit/a106a6cf9dd3793e4ece37dca32a78f429f21894))
+
 ## [1.18.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.0...v1.18.1) (2025-12-05)
 
 ### 🐛 Bug Fixes
