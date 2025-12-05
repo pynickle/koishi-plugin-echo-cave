@@ -1,3 +1,9 @@
+## [1.18.5](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.4...v1.18.5) (2025-12-05)
+
+### 💄 Style Improvements
+
+* improve code style ([2a9ce06](https://github.com/pynickle/koishi-plugin-echo-cave/commit/2a9ce0663c286704b3e133ac5950185cd879f5da))
+
 ## [1.18.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.18.3...v1.18.4) (2025-12-05)
 
 ### 🐛 Bug Fixes
