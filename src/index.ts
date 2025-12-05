@@ -11,6 +11,8 @@ export const name = 'echo-cave';
 
 export const inject = ['database'];
 
+export * from './config/config';
+
 export interface EchoCave {
     id: number;
     channelId: string;
