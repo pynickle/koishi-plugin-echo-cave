@@ -1,3 +1,9 @@
+## [1.16.15](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.14...v1.16.15) (2025-12-05)
+
+### 🐛 Bug Fixes
+
+* l don't understand ([60a38be](https://github.com/pynickle/koishi-plugin-echo-cave/commit/60a38be6a9fcbd01b96a4bc47c430d090c0ba0cd))
+
 ## [1.16.14](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.16.13...v1.16.14) (2025-12-05)
 
 ### 🐛 Bug Fixes
