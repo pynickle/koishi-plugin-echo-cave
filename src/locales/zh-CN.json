@@ -76,7 +76,8 @@
         "adminOnly": "⛔ 该消息由管理员发布，已开启管理员消息保护，只有管理员可以删除。",
         "permissionDenied": "⛔ 您没有权限删除此消息！只有管理员可以删除。",
         "contributorDeleteDenied": "⛔ 您没有权限删除此消息！当前配置不允许投稿者删除回声洞。",
-        "senderDeleteDenied": "⛔ 您没有权限删除此消息！当前配置不允许原始发送者删除回声洞。"
+        "senderDeleteDenied": "⛔ 您没有权限删除此消息！当前配置不允许原始发送者删除回声洞。",
+        "msgDeleted": "✅ 已成功抹去回声洞消息 ID：{0}"
       }
     },
     "cave.purge": {
@@ -102,16 +103,16 @@
       "description": "获得由自己投稿的回声洞列表",
       "messages": {
         "noMsgContributed": "🚀 您在回声洞中暂无投稿，快使用 \"cave.echo\" 命令添加第一条消息吧！",
-        "msgListHeader": "📜 您在本频道投稿的回声洞消息列表：\n",
-        "msgListItem": "ID: {0} | 创建时间: {1}\n"
+        "msgListHeader": "📜 您在本频道投稿的回声洞消息列表：",
+        "msgListItem": "ID: {0} | 创建时间: {1}"
       }
     },
     "cave.trace": {
       "description": "获得自己发言的回声洞列表",
       "messages": {
         "noMsgTraced": "🚀 您在回声洞中暂无发言被投稿，快使用 \"cave.echo\" 命令添加第一条消息吧！",
-        "msgListHeader": "📜 您在本频道发言的回声洞消息列表：\n",
-        "msgListItem": "ID: {0} | 创建时间: {1}\n"
+        "msgListHeader": "📜 您在本频道发言的回声洞消息列表：",
+        "msgListItem": "ID: {0} | 创建时间: {1}"
       }
     },
     "cave.bind": {

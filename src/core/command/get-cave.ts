@@ -19,10 +19,10 @@ export async function getCaveListByUser(ctx: Context, session: Session) {
         return session.text('.noMsgContributed');
     }
 
-    let response = session.text('.msgListHeader');
+    let response = session.text('.msgListHeader') + '\n';
 
     for (const cave of caves) {
-        response += session.text('.msgListItem', [cave.id, formatDate(cave.createTime)]);
+        response += session.text('.msgListItem', [cave.id, formatDate(cave.createTime)]) + '\n';
     }
 
     return response;
@@ -44,10 +44,10 @@ export async function getCaveListByOriginUser(ctx: Context, session: Session) {
         return session.text('.noMsgTraced');
     }
 
-    let response = session.text('.msgListHeader');
+    let response = session.text('.msgListHeader') + '\n';
 
     for (const cave of caves) {
-        response += session.text('.msgListItem', [cave.id, formatDate(cave.createTime)]);
+        response += session.text('.msgListItem', [cave.id, formatDate(cave.createTime)]) + '\n';
     }
 
     return response;
