@@ -46,7 +46,7 @@
     "esbuild": "^0.27.1",
     "esbuild-plugin-yaml": "^0.0.1",
     "oxfmt": "^0.17.0",
-    "oxlint": "^1.31.0",
+    "oxlint": "^1.32.0",
     "semantic-release": "^25.0.2",
     "typescript": "^5.9.3"
   }
