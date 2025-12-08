@@ -1,3 +1,15 @@
+## [1.20.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.20.0...v1.20.1) (2025-12-08)
+
+### 📚 Documentation
+
+* update README ([a56acc8](https://github.com/pynickle/koishi-plugin-echo-cave/commit/a56acc8513a588e71a2ce80e79440019c2b5f73f))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency esbuild to ^0.27.1 ([c801b6a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c801b6a488798709f549704bb296b0722e3bd404))
+* **deps:** update dependency pnpm to v10.24.0 ([8a8733a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/8a8733ac7363ec5066587b53b9bafb707d121a67))
+* update renovate config [skip ci] ([e964c55](https://github.com/pynickle/koishi-plugin-echo-cave/commit/e964c55d36fad3b2f81e848e6371b57def73aa0a))
+
 ## [1.20.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.19.3...v1.20.0) (2025-12-05)
 
 ### ✨ Features
