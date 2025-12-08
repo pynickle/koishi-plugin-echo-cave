@@ -55,7 +55,6 @@ async function generateRankingText(
     ctx: Context,
     session: Session,
     countMap: Map<string, number>,
-    period: Period,
     topCount: number
 ): Promise<string> {
     // Convert to array and sort
@@ -63,11 +62,7 @@ async function generateRankingText(
         .sort(([, a], [, b]) => b - a)
         .slice(0, topCount);
 
-    // Get period text from localization
-    const periodText = session.text(`.period.${period}`);
-
-    // Generate title
-    let text = session.text('.rankingTitle', [periodText]) + '\n\n';
+    let text = '';
 
     // Generate ranking content
     if (sortedUsers.length === 0) {
@@ -91,10 +86,15 @@ async function generateRankingText(
                     rankEmoji = '🥉';
                     break;
                 default:
-                    rankEmoji = `#${rank}`;
+                    rankEmoji = `${rank}.`;
             }
 
-            text += session.text('.rankFormat', [rankEmoji, userName, count]) + '\n';
+            // Add rank line without trailing newline for the last line
+            if (i === sortedUsers.length - 1) {
+                text += session.text('.rankFormat', [rankEmoji, userName, count]);
+            } else {
+                text += session.text('.rankFormat', [rankEmoji, userName, count]) + '\n';
+            }
         }
     }
 
@@ -135,23 +135,19 @@ export async function getRanking(
     const countMap = countUserOccurrences(caves);
 
     // Generate ranking text
-    const rankingText = await generateRankingText(
-        ctx,
-        session,
-        countMap,
-        normalizedPeriod as Period,
-        topCount
-    );
+    const rankingText = await generateRankingText(ctx, session, countMap, topCount);
 
     const botName = (await getUserName(this.ctx, session, session.bot?.userId)) || 'Bot';
 
+    // Get period text from localization
+    const periodText = session.text(`.period.${period}`);
+
+    // Generate title
+    let title = session.text('.rankingTitle', [periodText]);
+
     // Send forward message
     await session.onebot.sendGroupForwardMsg(channelId, [
-        createTextMsgNode(
-            session.bot?.userId || session.userId,
-            botName,
-            session.text('.rankingHeader')
-        ),
+        createTextMsgNode(session.bot?.userId || session.userId, botName, title),
         createTextMsgNode(session.bot?.userId || session.userId, botName, rankingText),
     ]);
 }
