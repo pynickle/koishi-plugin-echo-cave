@@ -33,8 +33,8 @@ function getStartTime(period: Period): Date {
     return startTime;
 }
 
-// Count user occurrences in relatedUsers and originUserId
-function countUserOccurrences(caves: EchoCave[]): Map<string, number> {
+// Count user occurrences in relatedUsers and possibly originUserId
+function countUserOccurrences(caves: EchoCave[], considerOriginUser: boolean): Map<string, number> {
     const countMap = new Map<string, number>();
 
     caves.forEach((cave) => {
@@ -43,8 +43,10 @@ function countUserOccurrences(caves: EchoCave[]): Map<string, number> {
             countMap.set(userId, (countMap.get(userId) || 0) + 1);
         });
 
-        // Origin user is also considered a related user
-        countMap.set(cave.originUserId, (countMap.get(cave.originUserId) || 0) + 1);
+        // Consider origin user as related user only if configured
+        if (considerOriginUser) {
+            countMap.set(cave.originUserId, (countMap.get(cave.originUserId) || 0) + 1);
+        }
     });
 
     return countMap;
@@ -90,10 +92,11 @@ async function generateRankingText(
             }
 
             // Add rank line without trailing newline for the last line
+            const rankData = { rankEmoji, userName, count };
             if (i === sortedUsers.length - 1) {
-                text += session.text('.rankFormat', [rankEmoji, userName, count]);
+                text += session.text('.rankFormat', rankData);
             } else {
-                text += session.text('.rankFormat', [rankEmoji, userName, count]) + '\n';
+                text += session.text('.rankFormat', rankData) + '\n';
             }
         }
     }
@@ -132,7 +135,7 @@ export async function getRanking(
     })) as EchoCave[];
 
     // Count user occurrences
-    const countMap = countUserOccurrences(caves);
+    const countMap = countUserOccurrences(caves, cfg.considerOriginUserAsRelated || false);
 
     // Generate ranking text
     const rankingText = await generateRankingText(ctx, session, countMap, topCount);

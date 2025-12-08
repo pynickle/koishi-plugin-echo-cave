@@ -127,7 +127,7 @@
         "invalidPeriod": "无效的时间段参数。支持的时间段：{0}",
         "rankingTitle": "📊 回声洞排行榜 ({0})",
         "noData": "暂无数据",
-        "rankFormat": "{0} {1}：{2} 个回声洞",
+        "rankFormat": "{rankEmoji} {userName}：{count} 个回声洞",
         "period": {
           "day": "24 小时",
           "week": "7 天",
