@@ -9,5 +9,6 @@
   "maxFileSize": "最大文件大小 (MB)",
   "maxRecordSize": "最大录音大小 (MB)",
   "useBase64ForMedia": "是否使用 Base64 编码发送媒体文件，开启后将读取 base64 编码发送而不是使用 file uri",
-  "sendAllAsForwardMsg": "是否将所有消息以转发消息形式发送，开启后普通消息也会转换为转发消息格式"
+  "sendAllAsForwardMsg": "是否将所有消息以转发消息形式发送，开启后普通消息也会转换为转发消息格式",
+  "rankingTopCount": "排行榜显示的用户数量"
 }

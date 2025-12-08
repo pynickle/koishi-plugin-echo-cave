@@ -12,6 +12,7 @@ export interface Config {
     maxRecordSize?: number;
     useBase64ForMedia?: boolean;
     sendAllAsForwardMsg?: boolean;
+    rankingTopCount?: number;
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -26,6 +27,7 @@ export const Config: Schema<Config> = Schema.object({
     maxRecordSize: Schema.number().default(512),
     useBase64ForMedia: Schema.boolean().default(false),
     sendAllAsForwardMsg: Schema.boolean().default(false),
+    rankingTopCount: Schema.number().default(10),
 }).i18n({
     'zh-CN': require('./locales/zh-CN.json'),
 });
