@@ -1,3 +1,9 @@
+## [1.21.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.21.0...v1.21.1) (2025-12-08)
+
+### 🚀 Improvements
+
+* improve text for ranking ([c5b9a64](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c5b9a64e399c530f94d1ef0d378d31f487f19709))
+
 ## [1.21.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.20.2...v1.21.0) (2025-12-08)
 
 ### ✨ Features
