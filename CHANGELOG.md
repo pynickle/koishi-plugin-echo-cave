@@ -1,3 +1,9 @@
+## [1.22.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.21.1...v1.22.0) (2025-12-08)
+
+### ✨ Features
+
+* add config option for whether to consider origin user as related ([886d760](https://github.com/pynickle/koishi-plugin-echo-cave/commit/886d7601951baab866c120c5169a5ab6b434dc93))
+
 ## [1.21.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.21.0...v1.21.1) (2025-12-08)
 
 ### 🚀 Improvements
