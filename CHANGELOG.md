@@ -1,3 +1,9 @@
+## [1.22.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.22.1...v1.22.2) (2025-12-09)
+
+### 🚀 Improvements
+
+* when related users is empty, automatically consider origin user ([9646698](https://github.com/pynickle/koishi-plugin-echo-cave/commit/9646698ee4c204778011b59e4737f4ca0d1de362))
+
 ## [1.22.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.22.0...v1.22.1) (2025-12-09)
 
 ### 🔧 Miscellaneous Changes
