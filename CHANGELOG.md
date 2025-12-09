@@ -1,3 +1,9 @@
+## [1.24.9](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.8...v1.24.9) (2025-12-09)
+
+### 🔧 Miscellaneous Changes
+
+* back to cjs build and downgrade uuid ([c7c9ce5](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c7c9ce5b755b4eb59e7ff5f0a95a4e41411405ae))
+
 ## [1.24.8](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.7...v1.24.8) (2025-12-09)
 
 ### 🔧 Miscellaneous Changes
