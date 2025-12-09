@@ -1,3 +1,9 @@
+## [1.24.8](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.7...v1.24.8) (2025-12-09)
+
+### 🔧 Miscellaneous Changes
+
+* remove extra import and make peerDependencies ([e262121](https://github.com/pynickle/koishi-plugin-echo-cave/commit/e262121cd1749fc6aa88ab593f0290e2df6d86dd))
+
 ## [1.24.7](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.6...v1.24.7) (2025-12-09)
 
 ### 🔧 Miscellaneous Changes
