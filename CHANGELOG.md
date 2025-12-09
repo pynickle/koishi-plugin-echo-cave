@@ -1,3 +1,9 @@
+## [1.24.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.0...v1.24.1) (2025-12-09)
+
+### 🐛 Bug Fixes
+
+* fix custom time parsing error ([f8aa1fa](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f8aa1fae171ee57a713844a0244d36fe9367b8dc))
+
 ## [1.24.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.23.0...v1.24.0) (2025-12-09)
 
 ### ✨ Features
