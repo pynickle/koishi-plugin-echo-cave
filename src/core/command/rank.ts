@@ -37,7 +37,7 @@ function parseCustomTime(timeStr: string): number | null {
     const unitOrder = ['M', 'w', 'd', 'h', 'm'];
 
     // Check if the time string is valid
-    if (!/^\d+([mhdwM]\d*)*$/.test(timeStr)) {
+    if (!/^(\d+[mhdwM])+$/.test(timeStr)) {
         return null;
     }
 
@@ -62,12 +62,13 @@ function parseCustomTime(timeStr: string): number | null {
 }
 
 // Calculate start time for a given period
-function getStartTime(period: Period): Date {
+function getStartTime(period: Period, customTimeMs?: number): Date {
     const now = new Date();
     const startTime = new Date();
 
-    // Check if it's a custom time string
-    const customTime = parseCustomTime(period as string);
+    // Check if custom time is provided or parse it
+    const customTime =
+        customTimeMs !== undefined ? customTimeMs : parseCustomTime(period as string);
     if (customTime !== null) {
         // For custom time, subtract the duration from current time
         startTime.setTime(now.getTime() - customTime);
@@ -204,17 +205,17 @@ export async function getRanking(
     // Validate period parameter
     const normalizedPeriod = period.toLowerCase();
 
+    // Parse custom time once and reuse the result
+    const customTimeMs = parseCustomTime(normalizedPeriod);
+
     // Check if it's a predefined period or a valid custom time
-    if (
-        !PREDEFINED_PERIODS.includes(normalizedPeriod as Period) &&
-        parseCustomTime(normalizedPeriod) === null
-    ) {
+    if (!PREDEFINED_PERIODS.includes(normalizedPeriod as Period) && customTimeMs === null) {
         await session.send(session.text('.invalidPeriod', [PREDEFINED_PERIODS.join(', ')]));
         return;
     }
 
     const { channelId } = session;
-    const startTime = getStartTime(normalizedPeriod as Period);
+    const startTime = getStartTime(normalizedPeriod as Period, customTimeMs);
     const topCount = cfg.rankingTopCount || 10;
 
     // Query all cave records within the specified period
@@ -231,10 +232,19 @@ export async function getRanking(
     // Generate ranking text
     const rankingText = await generateRankingText(ctx, session, countMap, topCount);
 
-    const botName = (await getUserName(this.ctx, session, session.bot?.userId)) || 'Bot';
+    // Get bot name using original logic
+    const botName = (await getUserName(ctx, session, session.bot?.userId)) || 'Bot';
 
-    // Get period text from localization
-    const periodText = session.text(`.period.${period}`);
+    // Get period text from localization or use original input for custom time
+    let periodText: string;
+
+    if (customTimeMs !== null) {
+        // For custom time, use the original input as period text
+        periodText = normalizedPeriod;
+    } else {
+        // Get predefined period text from localization
+        periodText = session.text(`.period.${normalizedPeriod}`);
+    }
 
     // Generate title
     let title = session.text('.rankingTitle', [periodText]);
