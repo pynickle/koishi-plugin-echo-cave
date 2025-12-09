@@ -10,7 +10,8 @@ await build({
     external: [
         'koishi',
         '@pynickle/koishi-plugin-adapter-onebot',
-        'axios'
+        'axios',
+        'uuid'
     ],
     plugins: [yamlPlugin.yamlPlugin({})],
 })

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Context } from 'koishi';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function saveMedia(
     ctx: Context,
@@ -27,7 +28,7 @@ export async function saveMedia(
     })();
 
     const mediaDir = path.join(ctx.baseDir, 'data', 'cave', type + 's');
-    const mediaName = Date.now().toString();
+    const mediaName = uuidv4().replace(/-/g, ''); // 移除连字符，生成唯一文件名
     const fullMediaPath = path.join(mediaDir, `${mediaName}.${ext}`);
 
     ctx.logger.info(`Saving ${type} from ${mediaUrl} -> ${fullMediaPath}`);
