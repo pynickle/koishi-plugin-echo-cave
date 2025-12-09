@@ -19,41 +19,46 @@ export const PREDEFINED_PERIODS: Array<Period> = [
 ];
 
 // Time unit multipliers (in milliseconds)
+// Time unit map (based on your definitions)
 const TIME_UNITS = {
-    m: 60 * 1000, // minutes
-    h: 60 * 60 * 1000, // hours
-    d: 24 * 60 * 60 * 1000, // days
-    w: 7 * 24 * 60 * 60 * 1000, // weeks
-    M: 30 * 24 * 60 * 60 * 1000, // months (approximate)
+    m: 30 * 24 * 60 * 60 * 1000, // 月（按约 30 天算）
+    w: 7 * 24 * 60 * 60 * 1000, // 周
+    d: 24 * 60 * 60 * 1000, // 天
+    h: 60 * 60 * 1000, // 小时
 };
 
-// Parse custom time string (e.g., "1d", "2d5h", "30m")
+// Parse custom time string (e.g., "1m", "2m5d", "3w7h")
 function parseCustomTime(timeStr: string): number | null {
-    // Regular expression to match time units (e.g., "1d", "2d5h", "30m")
-    const regex = /(\d+)([mhdwM])/g;
+    // New regex: only accept m w d h
+    const regex = /(\d+)([mwdh])/g;
     let match;
     let totalMs = 0;
     let lastUnit = '';
-    const unitOrder = ['M', 'w', 'd', 'h', 'm'];
 
-    // Check if the time string is valid
-    if (!/^(\d+[mhdwM])+$/.test(timeStr)) {
+    // Largest → smallest
+    const unitOrder = ['m', 'w', 'd', 'h'];
+
+    // Validate entire format
+    if (!/^(\d+[mwdh])+$/i.test(timeStr)) {
         return null;
     }
 
-    // Parse each time unit
+    // Parse
     while ((match = regex.exec(timeStr)) !== null) {
         const [, value, unit] = match;
         const num = parseInt(value, 10);
 
-        // Check if unit order is correct (larger units first)
+        // Check order
         const currentIndex = unitOrder.indexOf(unit);
         const lastIndex = unitOrder.indexOf(lastUnit);
+
+        if (lastUnit && currentIndex < 0) return null; // unknown unit
         if (lastUnit && currentIndex > lastIndex) {
+            // e.g. "1d2m" (小单位后跟大单位) → error
             return null;
         }
 
-        // Calculate milliseconds
+        // Add ms
         totalMs += num * TIME_UNITS[unit as keyof typeof TIME_UNITS];
         lastUnit = unit;
     }
