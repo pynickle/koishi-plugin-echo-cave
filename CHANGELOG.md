@@ -1,3 +1,10 @@
+## [1.24.6](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.5...v1.24.6) (2025-12-09)
+
+### 🔧 Miscellaneous Changes
+
+* fix esm error ([4a15045](https://github.com/pynickle/koishi-plugin-echo-cave/commit/4a150456211989e6aece184670371191c70ecf91))
+* try make bundle false ([17bc2d0](https://github.com/pynickle/koishi-plugin-echo-cave/commit/17bc2d02de6e20a04d20a115c6b3872e8cf0329f))
+
 ## [1.24.5](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.4...v1.24.5) (2025-12-09)
 
 ### 🔧 Miscellaneous Changes
