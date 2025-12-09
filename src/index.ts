@@ -4,7 +4,7 @@ import { addCave } from './core/command/add-cave';
 import { deleteCave, deleteCaves } from './core/command/delete-cave';
 import { getCave, getCaveListByOriginUser, getCaveListByUser } from './core/command/get-cave';
 import { bindUsersToCave } from './core/command/misc/bind-user';
-import { getRanking } from './core/command/ranking';
+import { getRanking } from './core/command/rank';
 import { searchCave } from './core/command/search-cave';
 import { Context } from 'koishi';
 
@@ -118,7 +118,7 @@ export function apply(ctx: Context, cfg: Config) {
     );
 
     // Ranking
-    ctx.command('cave.ranking [period:string]').action(
+    ctx.command('cave.rank [period:string]').action(
         async ({ session }, period) => await getRanking(ctx, session, cfg, period)
     );
 }

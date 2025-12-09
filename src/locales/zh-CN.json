@@ -121,7 +121,7 @@
         "userBoundSuccess": "✅ 已成功将用户绑定到回声洞 #{0}！"
       }
     },
-    "cave.ranking": {
+    "cave.rank": {
       "description": "查看回声洞排行榜",
       "messages": {
         "invalidPeriod": "无效的时间段参数。支持的时间段：{0}",

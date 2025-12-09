@@ -13,7 +13,6 @@ export interface Config {
     useBase64ForMedia?: boolean;
     sendAllAsForwardMsg?: boolean;
     rankingTopCount?: number;
-    considerOriginUserAsRelated?: boolean;
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -29,7 +28,6 @@ export const Config: Schema<Config> = Schema.object({
     useBase64ForMedia: Schema.boolean().default(false),
     sendAllAsForwardMsg: Schema.boolean().default(false),
     rankingTopCount: Schema.number().default(10),
-    considerOriginUserAsRelated: Schema.boolean().default(true),
 }).i18n({
     'zh-CN': require('./locales/zh-CN.json'),
 });

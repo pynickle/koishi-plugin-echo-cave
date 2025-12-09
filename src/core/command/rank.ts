@@ -34,18 +34,18 @@ function getStartTime(period: Period): Date {
 }
 
 // Count user occurrences in relatedUsers and possibly originUserId
-function countUserOccurrences(caves: EchoCave[], considerOriginUser: boolean): Map<string, number> {
+function countUserOccurrences(caves: EchoCave[]): Map<string, number> {
     const countMap = new Map<string, number>();
 
     caves.forEach((cave) => {
-        // Iterate through all related users
-        cave.relatedUsers.forEach((userId) => {
-            countMap.set(userId, (countMap.get(userId) || 0) + 1);
-        });
-
         // Consider origin user as related user only if configured
-        if (considerOriginUser) {
+        if (cave.relatedUsers.length === 0) {
             countMap.set(cave.originUserId, (countMap.get(cave.originUserId) || 0) + 1);
+        } else {
+            // Iterate through all related users
+            cave.relatedUsers.forEach((userId) => {
+                countMap.set(userId, (countMap.get(userId) || 0) + 1);
+            });
         }
     });
 
@@ -135,7 +135,7 @@ export async function getRanking(
     })) as EchoCave[];
 
     // Count user occurrences
-    const countMap = countUserOccurrences(caves, cfg.considerOriginUserAsRelated || false);
+    const countMap = countUserOccurrences(caves);
 
     // Generate ranking text
     const rankingText = await generateRankingText(ctx, session, countMap, topCount);
