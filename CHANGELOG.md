@@ -1,3 +1,13 @@
+## [1.24.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.3...v1.24.4) (2025-12-09)
+
+### 🐛 Bug Fixes
+
+* use uuid for media filename to avoid conflict ([195888a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/195888a76d86eb7b3033d15199407e09d52ffb79))
+
+### 📚 Documentation
+
+* update document ([2fb7223](https://github.com/pynickle/koishi-plugin-echo-cave/commit/2fb722348e5009de8c195d5046751d8f844c2efd))
+
 ## [1.24.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.2...v1.24.3) (2025-12-09)
 
 ### 🐛 Bug Fixes
