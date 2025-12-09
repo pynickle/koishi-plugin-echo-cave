@@ -3,7 +3,7 @@ import yamlPlugin from "esbuild-plugin-yaml";
 
 await build({
     entryPoints: ['src/index.ts'],
-    bundle: true,
+    bundle: false,
     outfile: 'lib/index.js',
     format: 'esm',
     platform: 'node',
