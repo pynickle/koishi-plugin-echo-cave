@@ -5,10 +5,10 @@ import { createTextMsgNode } from '../../utils/msg/cqcode-helper';
 import { Context, Session } from 'koishi';
 
 // Define supported period types
-export type Period = 'lday' | 'lweek' | 'lmonth' | 'day' | 'week' | 'month' | 'all';
+export type Period = 'lday' | 'lweek' | 'lmonth' | 'day' | 'week' | 'month' | 'all' | string;
 
-// List of supported periods
-export const SUPPORTED_PERIODS: Period[] = [
+// List of supported predefined periods
+export const PREDEFINED_PERIODS: Array<Period> = [
     'lday',
     'lweek',
     'lmonth',
@@ -18,11 +18,63 @@ export const SUPPORTED_PERIODS: Period[] = [
     'all',
 ];
 
+// Time unit multipliers (in milliseconds)
+const TIME_UNITS = {
+    m: 60 * 1000, // minutes
+    h: 60 * 60 * 1000, // hours
+    d: 24 * 60 * 60 * 1000, // days
+    w: 7 * 24 * 60 * 60 * 1000, // weeks
+    M: 30 * 24 * 60 * 60 * 1000, // months (approximate)
+};
+
+// Parse custom time string (e.g., "1d", "2d5h", "30m")
+function parseCustomTime(timeStr: string): number | null {
+    // Regular expression to match time units (e.g., "1d", "2d5h", "30m")
+    const regex = /(\d+)([mhdwM])/g;
+    let match;
+    let totalMs = 0;
+    let lastUnit = '';
+    const unitOrder = ['M', 'w', 'd', 'h', 'm'];
+
+    // Check if the time string is valid
+    if (!/^\d+([mhdwM]\d*)*$/.test(timeStr)) {
+        return null;
+    }
+
+    // Parse each time unit
+    while ((match = regex.exec(timeStr)) !== null) {
+        const [, value, unit] = match;
+        const num = parseInt(value, 10);
+
+        // Check if unit order is correct (larger units first)
+        const currentIndex = unitOrder.indexOf(unit);
+        const lastIndex = unitOrder.indexOf(lastUnit);
+        if (lastUnit && currentIndex > lastIndex) {
+            return null;
+        }
+
+        // Calculate milliseconds
+        totalMs += num * TIME_UNITS[unit as keyof typeof TIME_UNITS];
+        lastUnit = unit;
+    }
+
+    return totalMs;
+}
+
 // Calculate start time for a given period
 function getStartTime(period: Period): Date {
     const now = new Date();
     const startTime = new Date();
 
+    // Check if it's a custom time string
+    const customTime = parseCustomTime(period as string);
+    if (customTime !== null) {
+        // For custom time, subtract the duration from current time
+        startTime.setTime(now.getTime() - customTime);
+        return startTime;
+    }
+
+    // Handle predefined periods
     switch (period) {
         // Last day/week/month (previous 24h, 7d, 30d)
         case 'lday':
@@ -56,6 +108,11 @@ function getStartTime(period: Period): Date {
         // All time
         case 'all':
             startTime.setTime(0); // 1970-01-01
+            break;
+
+        // Default case (should not happen due to validation)
+        default:
+            startTime.setTime(0);
             break;
     }
 
@@ -146,8 +203,13 @@ export async function getRanking(
 
     // Validate period parameter
     const normalizedPeriod = period.toLowerCase();
-    if (!SUPPORTED_PERIODS.includes(normalizedPeriod as Period)) {
-        await session.send(session.text('.invalidPeriod', [SUPPORTED_PERIODS.join(', ')]));
+
+    // Check if it's a predefined period or a valid custom time
+    if (
+        !PREDEFINED_PERIODS.includes(normalizedPeriod as Period) &&
+        parseCustomTime(normalizedPeriod) === null
+    ) {
+        await session.send(session.text('.invalidPeriod', [PREDEFINED_PERIODS.join(', ')]));
         return;
     }
 
