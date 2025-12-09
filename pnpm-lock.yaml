@@ -17,12 +17,9 @@ importers:
       koishi:
         specifier: ^4.18.9
         version: 4.18.9(@cordisjs/plugin-http@0.6.3(cordis@3.18.1))(cordis@3.18.1)
-      koishi-plugin-adapter-onebot:
-        specifier: '*'
-        version: 6.8.0(koishi@4.18.9(@cordisjs/plugin-http@0.6.3(cordis@3.18.1))(cordis@3.18.1))
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^11.1.0
+        version: 11.1.0
     devDependencies:
       '@semantic-release/changelog':
         specifier: ^6.0.3
@@ -1359,11 +1356,6 @@ packages:
     resolution: {integrity: sha512-zPPuIt+ku1iCpFBRwseMcPYQ1cJL8l60rSmKeOuGfOXyE6YnTBmf2aEFNL2HQGrD0cPcLO/t+v9RTgC+fwEh/g==}
     engines: {node: ^4.8.4 || ^6.10.1 || ^7.10.1 || >= 8.1.4}
 
-  koishi-plugin-adapter-onebot@6.8.0:
-    resolution: {integrity: sha512-jFPZcINZSlWyKab3xcN7YGUCjyhVfeswgfdmUllvTA4nHO3udPRs9VNmaR7wLfcFSFZYrrJwZvM/t0Aak991sw==}
-    peerDependencies:
-      koishi: ^4.18.6
-
   koishi@4.18.9:
     resolution: {integrity: sha512-RDPSjWr4eRi0dNHNFNO0Z38mkgIIl+tbjHTFIxdOYsLTG+obEn5PVYie7sPmmtGuL1mJU6oTBsWJ6cX3V/y1ZA==}
     hasBin: true
@@ -2159,8 +2151,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@13.0.0:
-    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
   validate-npm-package-license@3.0.4:
@@ -3616,11 +3608,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  koishi-plugin-adapter-onebot@6.8.0(koishi@4.18.9(@cordisjs/plugin-http@0.6.3(cordis@3.18.1))(cordis@3.18.1)):
-    dependencies:
-      koishi: 4.18.9(@cordisjs/plugin-http@0.6.3(cordis@3.18.1))(cordis@3.18.1)
-      qface: 1.4.1
-
   koishi@4.18.9(@cordisjs/plugin-http@0.6.3(cordis@3.18.1))(cordis@3.18.1):
     dependencies:
       '@koishijs/core': 4.18.9
@@ -4332,7 +4319,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@13.0.0: {}
+  uuid@11.1.0: {}
 
   validate-npm-package-license@3.0.4:
     dependencies:
