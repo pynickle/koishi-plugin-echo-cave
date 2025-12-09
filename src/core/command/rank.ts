@@ -5,10 +5,18 @@ import { createTextMsgNode } from '../../utils/msg/cqcode-helper';
 import { Context, Session } from 'koishi';
 
 // Define supported period types
-export type Period = 'day' | 'week' | 'month' | 'all';
+export type Period = 'lday' | 'lweek' | 'lmonth' | 'day' | 'week' | 'month' | 'all';
 
 // List of supported periods
-export const SUPPORTED_PERIODS: Period[] = ['day', 'week', 'month', 'all'];
+export const SUPPORTED_PERIODS: Period[] = [
+    'lday',
+    'lweek',
+    'lmonth',
+    'day',
+    'week',
+    'month',
+    'all',
+];
 
 // Calculate start time for a given period
 function getStartTime(period: Period): Date {
@@ -16,15 +24,36 @@ function getStartTime(period: Period): Date {
     const startTime = new Date();
 
     switch (period) {
-        case 'day':
+        // Last day/week/month (previous 24h, 7d, 30d)
+        case 'lday':
             startTime.setDate(now.getDate() - 1);
             break;
-        case 'week':
+        case 'lweek':
             startTime.setDate(now.getDate() - 7);
             break;
-        case 'month':
-            startTime.setMonth(now.getMonth() - 1);
+        case 'lmonth':
+            startTime.setDate(now.getDate() - 30);
             break;
+
+        // This day/week/month (from start of period to now)
+        case 'day':
+            // Start of today (00:00:00)
+            startTime.setHours(0, 0, 0, 0);
+            break;
+        case 'week':
+            // Start of this week (Monday 00:00:00)
+            const dayOfWeek = now.getDay();
+            const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            startTime.setDate(now.getDate() - daysToMonday);
+            startTime.setHours(0, 0, 0, 0);
+            break;
+        case 'month':
+            // Start of this month (1st day 00:00:00)
+            startTime.setDate(1);
+            startTime.setHours(0, 0, 0, 0);
+            break;
+
+        // All time
         case 'all':
             startTime.setTime(0); // 1970-01-01
             break;
