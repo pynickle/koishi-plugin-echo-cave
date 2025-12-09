@@ -41,7 +41,7 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/npm": "^13.1.2",
     "@semantic-release/release-notes-generator": "^14.1.0",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.10.2",
     "conventional-changelog-conventionalcommits": "^9.1.0",
     "esbuild": "^0.27.1",
     "esbuild-plugin-yaml": "^0.0.1",
