@@ -29,10 +29,19 @@
     ]
   },
   "peerDependencies": {
-    "koishi": "^4.18.9"
+    "koishi": "^4.18.9",
+    "@pynickle/koishi-plugin-adapter-onebot": "^1.0.0",
+    "koishi-plugin-adapter-onebot": "*"
+  },
+  "peerDependenciesMeta": {
+    "@pynickle/koishi-plugin-adapter-onebot": {
+      "optional": true
+    },
+    "koishi-plugin-adapter-onebot": {
+      "optional": true
+    }
   },
   "dependencies": {
-    "@pynickle/koishi-plugin-adapter-onebot": "^1.0.0",
     "axios": "^1.13.2",
     "uuid": "^13.0.0"
   },

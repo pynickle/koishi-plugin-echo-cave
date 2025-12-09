@@ -1,4 +1,3 @@
-import '@pynickle/koishi-plugin-adapter-onebot';
 import { Config } from './config/config';
 import { addCave } from './core/command/add-cave';
 import { deleteCave, deleteCaves } from './core/command/delete-cave';
