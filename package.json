@@ -45,7 +45,6 @@
     "@types/node": "^24.10.2",
     "conventional-changelog-conventionalcommits": "^9.1.0",
     "esbuild": "^0.27.1",
-    "esbuild-plugin-yaml": "^0.0.1",
     "oxfmt": "^0.17.0",
     "oxlint": "^1.32.0",
     "semantic-release": "^25.0.2",

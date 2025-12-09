@@ -1,16 +1,4 @@
 {
-  "_config": {
-    "adminMessageProtection": "开启管理员消息保护，开启后管理员发布的消息只能由管理员删除",
-    "allowContributorDelete": "允许投稿者删除自己投稿的回声洞",
-    "allowSenderDelete": "允许原始发送者删除被投稿的回声洞",
-    "deleteMediaWhenDeletingMsg": "删除回声洞消息时是否同时删除关联的媒体文件",
-    "enableSizeLimit": "是否启用媒体文件大小限制",
-    "maxImageSize": "最大图片大小 (MB)",
-    "maxVideoSize": "最大视频大小 (MB)",
-    "maxFileSize": "最大文件大小 (MB)",
-    "maxRecordSize": "最大录音大小 (MB)",
-    "useBase64ForMedia": "是否使用 Base64 编码发送媒体文件，开启后将读取 base64 编码发送而不是使用 file uri"
-  },
   "echo-cave": {
     "general": {
       "privateChatReminder": "❌ 请在群聊中使用该命令！",
@@ -22,35 +10,21 @@
       "userNotInGroup": "❌ 提供的用户 ID 不全属于该群组！"
     },
     "templates": {
-      "forward": [
-        "🌀 回声洞 #{id}\n\n一则回声从时光中飘来——\n📅 {date} · 来自 @{originName}  \n📮 由 @{userName} 投递",
-        "🌀 回声洞 #{id}\n\n【记录编号】{id}  \n【创建时间】{date}  \n【原始作者】@{originName}  \n【投递者】@{userName}",
-        "🌀 回声洞 #{id}\n\n这声回响最初来自 @{originName}，  \n由 @{userName} 在 {date} 留下。",
-        "🌀 回声洞 #{id}\n\n时间的回音在此汇聚。  \n📅 {date}  \n📤 出处：@{originName}  \n📮 封印者：@{userName}",
-        "🌀 回声洞 #{id}\n\n📅 {date}  \n👤 来自 @{originName}  \n📮 投递者 @{userName}"
-      ],
-      "msg": [
-        {
-          "prefix": "🌀 回声洞 #{id}\n\n—— 有人留下了声音 ——{nl}",
-          "suffix": "📅 {date} · 来自 @{originName}\n📮 由 @{userName} 投递"
-        },
-        {
-          "prefix": "🌀 回声洞 #{id}\n───────────────",
-          "suffix": "───────────────\n📅 {date}\n👤 {originName} · 由 @{userName} 投递"
-        },
-        {
-          "prefix": "🌀 回声洞 #{id}\n\n💭「有人在洞壁留下印记」{nl}",
-          "suffix": "📅 {date}\n📮 {userName} 记录"
-        },
-        {
-          "prefix": "🌀 回声洞 #{id}\n\n— 回声开始 —{nl}",
-          "suffix": "— 回声结束 —\n📅 {date} · @{originName}\n📮 @{userName}"
-        },
-        {
-          "prefix": "🌀 回声洞 #{id}{nl}",
-          "suffix": "📅 {date}\n来自 @{originName}\n由 @{userName} 投递"
-        }
-      ]
+      "forward.1": "🌀 回声洞 #{id}\n\n一则回声从时光中飘来——\n📅 {date} · 来自 @{originName}  \n📮 由 @{userName} 投递",
+      "forward.2": "🌀 回声洞 #{id}\n\n【记录编号】{id}  \n【创建时间】{date}  \n【原始作者】@{originName}  \n【投递者】@{userName}",
+      "forward.3": "🌀 回声洞 #{id}\n\n这声回响最初来自 @{originName}，  \n由 @{userName} 在 {date} 留下。",
+      "forward.4": "🌀 回声洞 #{id}\n\n时间的回音在此汇聚。  \n📅 {date}  \n📤 出处：@{originName}  \n📮 封印者：@{userName}",
+      "forward.5": "🌀 回声洞 #{id}\n\n📅 {date}  \n👤 来自 @{originName}  \n📮 投递者 @{userName}",
+      "msg.1.prefix": "🌀 回声洞 #{id}\n\n—— 有人留下了声音 ——{nl}",
+      "msg.1.suffix": "📅 {date} · 来自 @{originName}\n📮 由 @{userName} 投递",
+      "msg.2.prefix": "🌀 回声洞 #{id}\n───────────────",
+      "msg.2.suffix": "───────────────\n📅 {date}\n👤 {originName} · 由 @{userName} 投递",
+      "msg.3.prefix": "🌀 回声洞 #{id}\n\n💭「有人在洞壁留下印记」{nl}",
+      "msg.3.suffix": "📅 {date}\n📮 {userName} 记录",
+      "msg.4.prefix": "🌀 回声洞 #{id}\n\n— 回声开始 —{nl}",
+      "msg.4.suffix": "— 回声结束 —\n📅 {date} · @{originName}\n📮 @{userName}",
+      "msg.5.prefix": "🌀 回声洞 #{id}{nl}",
+      "msg.5.suffix": "📅 {date}\n来自 @{originName}\n由 @{userName} 投递"
     }
   },
   "commands": {

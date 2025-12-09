@@ -1,9 +1,8 @@
 ﻿import { build } from 'esbuild'
-import yamlPlugin from "esbuild-plugin-yaml";
 
 await build({
     entryPoints: ['src/index.ts'],
-    bundle: false,
+    bundle: true,
     outfile: 'lib/index.js',
     format: 'esm',
     platform: 'node',
@@ -12,6 +11,5 @@ await build({
         '@pynickle/koishi-plugin-adapter-onebot',
         'axios',
         'uuid'
-    ],
-    plugins: [yamlPlugin.yamlPlugin({})],
+    ]
 })

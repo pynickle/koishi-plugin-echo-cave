@@ -4,6 +4,7 @@
     "outDir": "lib",
     "target": "es2022",
     "module": "esnext",
+    "resolveJsonModule": true,
     "declaration": true,
     "emitDeclarationOnly": true,
     "composite": true,
@@ -18,6 +19,7 @@
     ]
   },
   "include": [
-    "src"
+    "src",
+    "src/**/*.json"
   ]
 }

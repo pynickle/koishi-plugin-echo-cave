@@ -6,6 +6,7 @@ import { getCave, getCaveListByOriginUser, getCaveListByUser } from './core/comm
 import { bindUsersToCave } from './core/command/misc/bind-user';
 import { getRanking } from './core/command/rank';
 import { searchCave } from './core/command/search-cave';
+import zhCN from './locales/zh-CN.json';
 import { Context } from 'koishi';
 
 export const name = 'echo-cave';
@@ -33,7 +34,7 @@ declare module 'koishi' {
 }
 
 export function apply(ctx: Context, cfg: Config) {
-    ctx.i18n.define('zh-CN', require('./locales/zh-CN.json'));
+    ctx.i18n.define('zh-CN', zhCN);
 
     ctx.model.extend(
         'echo_cave',
