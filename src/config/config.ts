@@ -1,3 +1,4 @@
+import zhCN from './locales/zh-CN.json';
 import { Schema } from 'koishi';
 
 export interface Config {
@@ -29,5 +30,5 @@ export const Config: Schema<Config> = Schema.object({
     sendAllAsForwardMsg: Schema.boolean().default(false),
     rankingTopCount: Schema.number().default(10),
 }).i18n({
-    'zh-CN': require('./locales/zh-CN.json'),
+    'zh-CN': zhCN,
 });
