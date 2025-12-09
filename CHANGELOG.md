@@ -1,3 +1,9 @@
+## [1.24.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.23.0...v1.24.0) (2025-12-09)
+
+### ✨ Features
+
+* support custom period ([6a75dbd](https://github.com/pynickle/koishi-plugin-echo-cave/commit/6a75dbd0c37cd378cb47ef9bbf58cb383c9eadc0))
+
 ## [1.23.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.22.2...v1.23.0) (2025-12-09)
 
 ### ✨ Features
