@@ -37,8 +37,8 @@ importers:
         specifier: ^14.1.0
         version: 14.1.0(semantic-release@25.0.2(typescript@5.9.3))
       '@types/node':
-        specifier: ^24.10.2
-        version: 24.10.2
+        specifier: ^24.10.3
+        version: 24.10.3
       conventional-changelog-conventionalcommits:
         specifier: ^9.1.0
         version: 9.1.0
@@ -386,25 +386,21 @@ packages:
     resolution: {integrity: sha512-KlwzidgvHznbUaaglZT1goTS30osTV553pfbKve9B1PyTDkluNDfm/polOaf3SVLN7wL/NNLFZRMupvJ1eJXAw==}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@oxfmt/linux-arm64-musl@0.17.0':
     resolution: {integrity: sha512-+tbYJTocF4BNLaQQbc/xrBWTNgiU6zmYeF4NvRDxuuQjDOnmUZPn0EED3PZBRJyg4/YllhplHDo8x+gfcb9G3A==}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@oxfmt/linux-x64-gnu@0.17.0':
     resolution: {integrity: sha512-pEmv7zJIw2HpnA4Tn1xrfJNGi2wOH2+usT14Pkvf/c5DdB+pOir6k/5jzfe70+V3nEtmtV9Lm+spndN/y6+X7A==}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@oxfmt/linux-x64-musl@0.17.0':
     resolution: {integrity: sha512-+DrFSCZWyFdtEAWR5xIBTV8GX0RA9iB+y7ZlJPRAXrNG8TdBY9vc7/MIGolIgrkMPK4mGMn07YG/qEyPY+iKaw==}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@oxfmt/win32-arm64@0.17.0':
     resolution: {integrity: sha512-FoUZRR7mVpTYIaY/qz2BYwzqMnL+HsUxmMWAIy6nl29UEkDgxNygULJ4rIGY4/Axne41fhtldLrSGBOpwNm3jA==}
@@ -430,25 +426,21 @@ packages:
     resolution: {integrity: sha512-tyomSmU2DzwcTmbaWFmStHgVfRmJDDvqcIvcw4fRB1YlL2Qg/XaM4NJ0m2bdTap38gxD5FSxSgCo0DkQ8GTolg==}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@oxlint/linux-arm64-musl@1.32.0':
     resolution: {integrity: sha512-0W46dRMaf71OGE4+Rd+GHfS1uF/UODl5Mef6871pMhN7opPGfTI2fKJxh9VzRhXeSYXW/Z1EuCq9yCfmIJq+5Q==}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@oxlint/linux-x64-gnu@1.32.0':
     resolution: {integrity: sha512-5+6myVCBOMvM62rDB9T3CARXUvIwhGqte6E+HoKRwYaqsxGUZ4bh3pItSgSFwHjLGPrvADS11qJUkk39eQQBzQ==}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@oxlint/linux-x64-musl@1.32.0':
     resolution: {integrity: sha512-qwQlwYYgVIC6ScjpUwiKKNyVdUlJckrfwPVpIjC9mvglIQeIjKuuyaDxUZWIOc/rEzeCV/tW6tcbehLkfEzqsw==}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@oxlint/win32-arm64@1.32.0':
     resolution: {integrity: sha512-7qYZF9CiXGtdv8Z/fBkgB5idD2Zokht67I5DKWH0fZS/2R232sDqW2JpWVkXltk0+9yFvmvJ0ouJgQRl9M3S2g==}
@@ -600,8 +592,8 @@ packages:
   '@types/mime@1.3.5':
     resolution: {integrity: sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w==}
 
-  '@types/node@24.10.2':
-    resolution: {integrity: sha512-WOhQTZ4G8xZ1tjJTvKOpyEVSGgOTvJAfDK3FNFgELyaTpzhdgHVHeqW8V+UJvzF5BT+/B54T/1S2K6gd9c7bbA==}
+  '@types/node@24.10.3':
+    resolution: {integrity: sha512-gqkrWUsS8hcm0r44yn7/xZeV1ERva/nLgrLxFRUGb7aoNMIJfZJ3AC261zDQuOAKC7MiXai1WCpYc48jAHoShQ==}
 
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
@@ -2739,21 +2731,21 @@ snapshots:
 
   '@types/accepts@1.3.7':
     dependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/co-body@6.1.3':
     dependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
       '@types/qs': 6.14.0
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/content-disposition@0.5.9': {}
 
@@ -2762,11 +2754,11 @@ snapshots:
       '@types/connect': 3.4.38
       '@types/express': 5.0.5
       '@types/keygrip': 1.0.6
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/express-serve-static-core@5.1.0':
     dependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
       '@types/qs': 6.14.0
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
@@ -2779,7 +2771,7 @@ snapshots:
 
   '@types/formidable@2.0.6':
     dependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/http-assert@1.5.6': {}
 
@@ -2800,7 +2792,7 @@ snapshots:
       '@types/http-errors': 2.0.5
       '@types/keygrip': 1.0.6
       '@types/koa-compose': 3.2.9
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/koa@3.0.1':
     dependencies:
@@ -2811,7 +2803,7 @@ snapshots:
       '@types/http-errors': 2.0.5
       '@types/keygrip': 1.0.6
       '@types/koa-compose': 3.2.9
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/koa__router@12.0.5':
     dependencies:
@@ -2819,7 +2811,7 @@ snapshots:
 
   '@types/mime@1.3.5': {}
 
-  '@types/node@24.10.2':
+  '@types/node@24.10.3':
     dependencies:
       undici-types: 7.16.0
 
@@ -2832,21 +2824,21 @@ snapshots:
   '@types/send@0.17.6':
     dependencies:
       '@types/mime': 1.3.5
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/send@1.2.1':
     dependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   '@types/serve-static@1.15.10':
     dependencies:
       '@types/http-errors': 2.0.5
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
       '@types/send': 0.17.6
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
 
   abort-controller@3.0.0:
     dependencies:
