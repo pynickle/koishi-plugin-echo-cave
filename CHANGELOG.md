@@ -1,3 +1,11 @@
+## [1.24.10](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.9...v1.24.10) (2025-12-12)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @types/node to ^24.10.3 ([c63c3bd](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c63c3bde3592850c3fd6e18d0a598390dacb92f2))
+* fix npm token ([52c6955](https://github.com/pynickle/koishi-plugin-echo-cave/commit/52c6955301721e5706b3328dca86080293c17600))
+* ignore uuid update [skip ci] ([f7b8b5b](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f7b8b5bbd49d8e25af61fa0f716c3c0a9ff7304d))
+
 ## [1.24.9](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.8...v1.24.9) (2025-12-09)
 
 ### 🔧 Miscellaneous Changes
