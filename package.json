@@ -9,6 +9,10 @@
     "lib",
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pynickle/koishi-plugin-echo-cave"
+  },
   "license": "MIT",
   "scripts": {
     "lint": "npx oxlint ./src",

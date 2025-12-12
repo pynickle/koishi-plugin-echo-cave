@@ -1,5 +1,17 @@
 ﻿{
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "rangeStrategy": "bump",
-  "ignoreDeps": ["uuid"]
+  "ignoreDeps": ["uuid"],
+  "packageRules": [
+    {
+      "matchPackageNames": ["@types/node"],
+      "allowedVersions": "24.x"
+    },
+    {
+      "enabled": false,
+      "matchDepTypes": [
+        "peerDependencies"
+      ]
+    }
+  ]
 }
