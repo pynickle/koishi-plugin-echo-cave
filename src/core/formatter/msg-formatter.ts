@@ -51,8 +51,7 @@ export async function sendCaveMsg(
     // Check if content is actually a forward message by looking for node elements
     const isActualForward = content.some((item) => item.type === 'node');
     // Determine if we should send as forward message
-    const shouldSendAsForward =
-        cfg.sendAllAsForwardMsg || (caveMsg.type === 'forward' && isActualForward);
+    const shouldSendAsForward = cfg.sendAllAsForwardMsg || caveMsg.type === 'forward';
 
     if (shouldSendAsForward) {
         // Get forward templates, filtering out empty ones

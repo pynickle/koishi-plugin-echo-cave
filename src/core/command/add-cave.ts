@@ -60,7 +60,13 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         if (typeof message === 'string') {
             msgJson = CQCode.parse(message);
         } else {
-            if (message[0].type === 'video' || message[0].type === 'file') {
+            const firstMsgType = message[0].type;
+            if (
+                firstMsgType === 'video' ||
+                firstMsgType === 'file' ||
+                firstMsgType === 'record' ||
+                message.some((m) => m.type === 'reply')
+            ) {
                 type = 'forward';
             }
             msgJson = message;

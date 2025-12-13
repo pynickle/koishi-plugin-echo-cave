@@ -8,12 +8,5 @@ export async function processMessageContent(
     msg: CQCode[],
     cfg: Config
 ): Promise<CQCode[]> {
-    return Promise.all(
-        msg.map(async (element) => {
-            if (element.type === 'reply') {
-                return element;
-            }
-            return processMediaElement(ctx, element, cfg);
-        })
-    );
+    return Promise.all(msg.map(async (element) => processMediaElement(ctx, element, cfg)));
 }
