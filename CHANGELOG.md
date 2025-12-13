@@ -1,3 +1,13 @@
+## [1.24.11](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.10...v1.24.11) (2025-12-13)
+
+### 💄 Style Improvements
+
+* remove bom ([b631e0a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/b631e0a9db730f903f835f8780eb58f1e122d883))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @semantic-release/npm to ^13.1.3 ([44375f0](https://github.com/pynickle/koishi-plugin-echo-cave/commit/44375f0cde7909b273dcf92b4e79d328bc18721d))
+
 ## [1.24.10](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.9...v1.24.10) (2025-12-12)
 
 ### 🔧 Miscellaneous Changes
