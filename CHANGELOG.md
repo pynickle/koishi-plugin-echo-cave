@@ -1,3 +1,9 @@
+## [1.24.12](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.11...v1.24.12) (2025-12-13)
+
+### 🚀 Improvements
+
+* treat reply as forward msg ([5bc743d](https://github.com/pynickle/koishi-plugin-echo-cave/commit/5bc743d15adbf8ddffc7de230d353801720c5303))
+
 ## [1.24.11](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.10...v1.24.11) (2025-12-13)
 
 ### 💄 Style Improvements
