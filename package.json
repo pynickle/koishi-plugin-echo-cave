@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-echo-cave",
   "description": "Group echo cave",
-  "version": "1.24.12",
+  "version": "1.24.13",
   "main": "lib/index.cjs",
   "typings": "lib/index.d.ts",
   "type": "module",

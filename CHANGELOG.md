@@ -1,3 +1,9 @@
+## [1.24.13](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.12...v1.24.13) (2025-12-15)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @types/node to ^24.10.4 ([cd6e8ba](https://github.com/pynickle/koishi-plugin-echo-cave/commit/cd6e8ba60161f5038072c1c2e733f5aae7f024cf))
+
 ## [1.24.12](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.11...v1.24.12) (2025-12-13)
 
 ### 🚀 Improvements
