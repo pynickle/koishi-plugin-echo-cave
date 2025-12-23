@@ -1,3 +1,14 @@
+## [1.24.18](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.17...v1.24.18) (2025-12-23)
+
+### 🐛 Bug Fixes
+
+* fix record not being sent correctly ([96ff527](https://github.com/pynickle/koishi-plugin-echo-cave/commit/96ff52728641b304bb5bf603fc21cf910563cd7d))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency oxfmt to ^0.20.0 ([518f0a4](https://github.com/pynickle/koishi-plugin-echo-cave/commit/518f0a4efe63be623c4083a80335637874f5abaa))
+* **deps:** update dependency oxlint to ^1.35.0 ([018f1e5](https://github.com/pynickle/koishi-plugin-echo-cave/commit/018f1e58aa6f8783cf026f36fda349361283c1f1))
+
 ## [1.24.17](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.16...v1.24.17) (2025-12-20)
 
 ### 🔧 Miscellaneous Changes
