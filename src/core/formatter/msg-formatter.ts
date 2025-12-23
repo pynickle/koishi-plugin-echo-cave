@@ -76,6 +76,12 @@ export async function sendCaveMsg(
 
         // If not an actual forward message, convert it to forward message format
         if (!isActualForward) {
+            // Special handling for record type messages
+            if (content[0].type === 'record') {
+                await session.onebot.sendGroupMsg(channelId, content);
+                return;
+            }
+
             // Create a forward message node with the current message
             const forwardContent = [
                 {
