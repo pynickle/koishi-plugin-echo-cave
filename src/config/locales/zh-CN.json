@@ -10,5 +10,7 @@
   "maxRecordSize": "最大录音大小 (MB)",
   "useBase64ForMedia": "是否使用 Base64 编码发送媒体文件，开启后将读取 base64 编码发送而不是使用 file uri",
   "sendAllAsForwardMsg": "是否将所有消息以转发消息形式发送，开启后普通消息也会转换为转发消息格式",
-  "rankingTopCount": "排行榜显示的用户数量"
+  "rankingTopCount": "排行榜显示的用户数量",
+  "forwardSelectTimeout": "合并转发消息选择关联用户的超时时间 (秒)",
+  "enableForwardUserSelection": "是否启用合并转发消息的关联用户选择功能"
 }

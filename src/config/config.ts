@@ -14,6 +14,8 @@ export interface Config {
     useBase64ForMedia?: boolean;
     sendAllAsForwardMsg?: boolean;
     rankingTopCount?: number;
+    forwardSelectTimeout?: number;
+    enableForwardUserSelection?: boolean;
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -29,6 +31,8 @@ export const Config: Schema<Config> = Schema.object({
     useBase64ForMedia: Schema.boolean().default(false),
     sendAllAsForwardMsg: Schema.boolean().default(false),
     rankingTopCount: Schema.number().default(10),
+    forwardSelectTimeout: Schema.number().default(20),
+    enableForwardUserSelection: Schema.boolean().default(true),
 }).i18n({
     'zh-CN': zhCN,
 });

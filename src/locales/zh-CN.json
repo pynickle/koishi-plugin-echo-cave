@@ -39,7 +39,10 @@
       "messages": {
         "noMsgQuoted": "💡 请引用一条消息后再使用此命令！",
         "msgSaved": "✅ 回声洞消息已成功存入，消息 ID：{0}",
-        "msgFailedToSave": "❌ 回声洞保存失败，请稍后重试！"
+        "msgFailedToSave": "❌ 回声洞保存失败，请稍后重试！",
+        "selectRelatedUsers": "请选择要关联的用户（以空格分隔序号，输入'all'选择全部）：",
+        "selectInstruction": "输入示例：1 3 或 all",
+        "invalidSelection": "❌ 无效的选择，请重新输入！"
       }
     },
     "cave.drop": {
