@@ -1,3 +1,9 @@
+## [1.25.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.25.1...v1.25.2) (2025-12-24)
+
+### 🐛 Bug Fixes
+
+* fix event cannot be cancelled ([50a5396](https://github.com/pynickle/koishi-plugin-echo-cave/commit/50a5396cf671dc082c438def2bb756955bc47e8b))
+
 ## [1.25.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.25.0...v1.25.1) (2025-12-24)
 
 ### 🐛 Bug Fixes
