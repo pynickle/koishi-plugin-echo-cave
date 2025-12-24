@@ -1,3 +1,9 @@
+## [1.26.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.25.2...v1.26.0) (2025-12-24)
+
+### ✨ Features
+
+* add relatedUsers template data for add cave ([adba385](https://github.com/pynickle/koishi-plugin-echo-cave/commit/adba38595f07662ee7c3f20fa99dc929cfa33b98))
+
 ## [1.25.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.25.1...v1.25.2) (2025-12-24)
 
 ### 🐛 Bug Fixes
