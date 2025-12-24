@@ -1,3 +1,14 @@
+## [1.24.19](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.18...v1.24.19) (2025-12-24)
+
+### 🐛 Bug Fixes
+
+* fix incorrect validation for video content type ([82ab233](https://github.com/pynickle/koishi-plugin-echo-cave/commit/82ab233188376edbcfe0a486208d0a575c68121a))
+* fix search logic with both relatedUsers and originUser ([f3a1db1](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f3a1db10ca25f5da079061f89d50d2c3509a1d21))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency pnpm to v10.26.2 ([78f15f8](https://github.com/pynickle/koishi-plugin-echo-cave/commit/78f15f8901559bd6ee3b6790a66b7814cb140378))
+
 ## [1.24.18](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.17...v1.24.18) (2025-12-23)
 
 ### 🐛 Bug Fixes
