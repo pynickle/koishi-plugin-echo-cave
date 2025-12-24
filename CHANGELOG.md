@@ -1,3 +1,9 @@
+## [1.25.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.19...v1.25.0) (2025-12-24)
+
+### ✨ Features
+
+* add forward msg relatedUsers selection (experimental) ([92c157c](https://github.com/pynickle/koishi-plugin-echo-cave/commit/92c157c0b63497d6b724901d2fce91739b0e67b6))
+
 ## [1.24.19](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.24.18...v1.24.19) (2025-12-24)
 
 ### 🐛 Bug Fixes
