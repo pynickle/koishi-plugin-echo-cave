@@ -54,7 +54,11 @@ export async function saveMedia(
                 ctx.logger.warn(`Invalid image content-type: ${contentType}`);
                 return mediaUrl;
             }
-            if (type === 'video' && !contentType.startsWith('video/')) {
+            if (
+                type === 'video' &&
+                !contentType.startsWith('video/') &&
+                contentType !== 'application/octet-stream'
+            ) {
                 ctx.logger.warn(`Invalid video content-type: ${contentType}`);
                 return mediaUrl;
             }
