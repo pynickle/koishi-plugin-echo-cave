@@ -1,6 +1,6 @@
 import { Config } from '../../config/config';
 import { EchoCave } from '../../index';
-import { formatDate, sendCaveMsg } from '../formatter/msg-formatter';
+import { sendCaveMsg } from '../formatter/msg-formatter';
 import { Context, Session } from 'koishi';
 
 export async function getCaveListByUser(ctx: Context, session: Session) {

@@ -1,4 +1,4 @@
-import { checkUsersInGroup } from '../../adapters/onebot/user';
+import { checkUsersInGroup, getUserName } from '../../adapters/onebot/user';
 import { Config } from '../../config/config';
 import { parseUserIds } from '../../utils/msg/element-helper';
 import { listenForUserMessage } from '../../utils/msg/message-listener';
@@ -166,7 +166,11 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
     const finalParsedUserIds = selectedUsersWithNames.map((user) => user.userId);
 
     // Format related users for response
-    const relatedUsersFormatted = selectedUsersWithNames.map((user) => user.nickname).join(', ');
+    const originName = await getUserName(ctx, session, quote.user.id);
+    const relatedUsersFormatted =
+        selectedUsersWithNames.length !== 0
+            ? selectedUsersWithNames.map((user) => user.nickname).join(', ')
+            : originName;
 
     try {
         const result = await ctx.database.create('echo_cave_v2', {
