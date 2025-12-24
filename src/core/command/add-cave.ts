@@ -37,6 +37,9 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         }
     }
 
+    // Initialize variables to store selected user IDs and names
+    let selectedUsersWithNames: Array<{ userId: string; nickname: string }> = [];
+
     let content: string | CQCode[];
     let type: 'forward' | 'msg';
     let forwardUsers: { userId: string; nickname: string }[] = [];
@@ -102,60 +105,68 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         cfg.enableForwardUserSelection
     ) {
         // Create a promise to handle the user selection
-        const userSelectionPromise = new Promise<string[]>((resolve) => {
-            // Generate the prompt message
-            let prompt = session.text('.selectRelatedUsers');
-            forwardUsers.forEach((user, index) => {
-                prompt += `\n${index + 1}: ${user.nickname}`;
-            });
-            prompt += `\n${session.text('.selectInstruction')}`;
+        const userSelectionPromise = new Promise<Array<{ userId: string; nickname: string }>>(
+            (resolve) => {
+                // Generate the prompt message
+                let prompt = session.text('.selectRelatedUsers');
+                forwardUsers.forEach((user, index) => {
+                    prompt += `\n${index + 1}: ${user.nickname}`;
+                });
+                prompt += `\n${session.text('.selectInstruction')}`;
 
-            // Start listening for user message
-            listenForUserMessage(
-                ctx,
-                session,
-                prompt,
-                cfg.forwardSelectTimeout * 1000, // Convert seconds to milliseconds
-                async (message) => {
-                    const trimmedMessage = message.trim();
-                    let selectedUsers: string[] = [];
+                // Start listening for user message
+                listenForUserMessage(
+                    ctx,
+                    session,
+                    prompt,
+                    cfg.forwardSelectTimeout * 1000, // Convert seconds to milliseconds
+                    async (message) => {
+                        const trimmedMessage = message.trim();
+                        let selectedUsers: Array<{ userId: string; nickname: string }> = [];
 
-                    if (trimmedMessage.toLowerCase() === 'all') {
-                        // Select all users
-                        selectedUsers = forwardUsers.map((user) => user.userId);
-                    } else if (trimmedMessage.toLowerCase() === 'skip') {
-                        // Skip selection, return empty array
-                        selectedUsers = [];
-                    } else {
-                        // Parse the selected indices
-                        const indices = trimmedMessage
-                            .split(/\s+/)
-                            .map((index) => parseInt(index.trim()) - 1);
-                        const validIndices = indices.filter(
-                            (index) => index >= 0 && index < forwardUsers.length
-                        );
-
-                        if (validIndices.length > 0) {
-                            selectedUsers = validIndices.map((index) => forwardUsers[index].userId);
+                        if (trimmedMessage.toLowerCase() === 'all') {
+                            // Select all users
+                            selectedUsers = [...forwardUsers];
+                        } else if (trimmedMessage.toLowerCase() === 'skip') {
+                            // Skip selection, return empty array
+                            selectedUsers = [];
                         } else {
-                            // Invalid input, ask again
-                            await session.send(session.text('.invalidSelection'));
-                            return true; // Continue listening
-                        }
-                    }
+                            // Parse the selected indices
+                            const indices = trimmedMessage
+                                .split(/\s+/)
+                                .map((index) => parseInt(index.trim()) - 1);
+                            const validIndices = indices.filter(
+                                (index) => index >= 0 && index < forwardUsers.length
+                            );
 
-                    resolve(selectedUsers);
-                    return false; // Stop listening
-                },
-                async () => {
-                    resolve([]);
-                }
-            );
-        });
+                            if (validIndices.length > 0) {
+                                selectedUsers = validIndices.map((index) => forwardUsers[index]);
+                            } else {
+                                // Invalid input, ask again
+                                await session.send(session.text('.invalidSelection'));
+                                return true; // Continue listening
+                            }
+                        }
+
+                        resolve(selectedUsers);
+                        return false; // Stop listening
+                    },
+                    async () => {
+                        resolve([]);
+                    }
+                );
+            }
+        );
 
         // Wait for user selection or timeout
-        parsedUserIds = await userSelectionPromise;
+        selectedUsersWithNames = await userSelectionPromise;
     }
+
+    // Extract final user IDs for database
+    const finalParsedUserIds = selectedUsersWithNames.map((user) => user.userId);
+
+    // Format related users for response
+    const relatedUsersFormatted = selectedUsersWithNames.map((user) => user.nickname).join(', ');
 
     try {
         const result = await ctx.database.create('echo_cave_v2', {
@@ -165,10 +176,10 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
             originUserId: quote.user.id,
             type,
             content,
-            relatedUsers: parsedUserIds || [],
+            relatedUsers: finalParsedUserIds,
         });
 
-        return session.text('.msgSaved', [result.id]);
+        return session.text('.msgSaved', { id: result.id, relatedUsers: relatedUsersFormatted });
     } catch (error) {
         return session.text('.msgFailedToSave');
     }
