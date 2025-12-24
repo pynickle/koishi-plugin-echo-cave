@@ -35,8 +35,10 @@ export async function searchCave(ctx: Context, session: Session, userIds: string
         channelId,
     });
 
-    const matchingCaves = caves.filter(
-        (cave) => cave.originUserId === targetUserId || cave.relatedUsers.includes(targetUserId)
+    const matchingCaves = caves.filter((cave) =>
+        cave.relatedUsers.length === 0
+            ? cave.originUserId === targetUserId
+            : cave.relatedUsers.includes(targetUserId)
     );
 
     if (matchingCaves.length === 0) {
