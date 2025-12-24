@@ -1,32 +1,18 @@
 import { Context, Session } from 'koishi';
 
-export interface MessageListenerOptions {
-    ctx: Context;
-    session: Session;
-    prompt: string;
-    timeout: number;
-    onTimeout?: () => Promise<void>;
-    onMessage: (message: string) => Promise<boolean>;
-}
-
-export async function listenForUserMessage(options: MessageListenerOptions): Promise<void> {
-    const { ctx, session, prompt, timeout, onTimeout, onMessage } = options;
+export async function listenForUserMessage(
+    ctx: Context,
+    session: Session,
+    prompt: string,
+    timeout: number,
+    onMessage: (message: string) => Promise<boolean>,
+    onTimeout?: () => Promise<void>
+): Promise<void> {
     const userId = session.userId;
     const channelId = session.channelId;
 
     // Send prompt message
-    const promptMessage = await session.send(prompt);
-    let promptMessageId: string = '';
-
-    // Try to get messageId using type assertion to simplify type handling
-    try {
-        const msgObj = promptMessage as any;
-        if (msgObj && typeof msgObj === 'object' && msgObj.messageId) {
-            promptMessageId = String(msgObj.messageId);
-        }
-    } catch (error) {
-        // Ignore type conversion errors
-    }
+    const promptMessageId = await session.onebot.sendGroupMsg(channelId, prompt);
 
     let timeoutId: NodeJS.Timeout;
 
@@ -45,13 +31,13 @@ export async function listenForUserMessage(options: MessageListenerOptions): Pro
                 ctx.off('message', listener);
 
                 // Try to recall prompt message
-                if (promptMessageId) {
-                    try {
-                        await session.onebot.deleteMsg(promptMessageId);
-                    } catch (error) {
-                        // Ignore recall failure
-                    }
+                try {
+                    await session.onebot.deleteMsg(promptMessageId);
+                } catch (error) {
+                    // Ignore recall failure
                 }
+
+                cancelTimeout();
             }
         }
     };
@@ -60,7 +46,7 @@ export async function listenForUserMessage(options: MessageListenerOptions): Pro
     ctx.on('message', listener);
 
     // Set timeout timer
-    timeoutId = setTimeout(async () => {
+    const cancelTimeout = ctx.setTimeout(async () => {
         // Remove listener
         ctx.off('message', listener);
 
@@ -70,12 +56,10 @@ export async function listenForUserMessage(options: MessageListenerOptions): Pro
         }
 
         // Try to recall prompt message
-        if (promptMessageId) {
-            try {
-                await session.onebot.deleteMsg(promptMessageId);
-            } catch (error) {
-                // Ignore recall failure
-            }
+        try {
+            await session.onebot.deleteMsg(promptMessageId);
+        } catch (error) {
+            // Ignore recall failure
         }
     }, timeout);
 }

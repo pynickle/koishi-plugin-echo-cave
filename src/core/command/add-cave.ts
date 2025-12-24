@@ -111,15 +111,12 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
             prompt += `\n${session.text('.selectInstruction')}`;
 
             // Start listening for user message
-            listenForUserMessage({
+            listenForUserMessage(
                 ctx,
                 session,
                 prompt,
-                timeout: (cfg.forwardSelectTimeout || 20) * 1000, // Convert seconds to milliseconds
-                onTimeout: async () => {
-                    resolve([]);
-                },
-                onMessage: async (message) => {
+                cfg.forwardSelectTimeout * 1000, // Convert seconds to milliseconds
+                async (message) => {
                     const trimmedMessage = message.trim();
                     let selectedUsers: string[] = [];
 
@@ -150,7 +147,10 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
                     resolve(selectedUsers);
                     return false; // Stop listening
                 },
-            });
+                async () => {
+                    resolve([]);
+                }
+            );
         });
 
         // Wait for user selection or timeout
