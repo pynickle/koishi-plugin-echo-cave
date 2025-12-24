@@ -1,3 +1,9 @@
+## [1.26.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.0...v1.26.1) (2025-12-24)
+
+### 🐛 Bug Fixes
+
+* fix situation when no related Users are selected ([3f6d429](https://github.com/pynickle/koishi-plugin-echo-cave/commit/3f6d429a8f38c556ab04aaa524ff61da886cb247))
+
 ## [1.26.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.25.2...v1.26.0) (2025-12-24)
 
 ### ✨ Features
