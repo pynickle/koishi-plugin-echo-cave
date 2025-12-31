@@ -1,3 +1,9 @@
+## [1.26.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.2...v1.26.3) (2025-12-31)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency pnpm to v10.27.0 ([fc6f756](https://github.com/pynickle/koishi-plugin-echo-cave/commit/fc6f756a09e825a7c772a6e7bba025bdaf38bae9))
+
 ## [1.26.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.1...v1.26.2) (2025-12-30)
 
 ### 🔧 Miscellaneous Changes
