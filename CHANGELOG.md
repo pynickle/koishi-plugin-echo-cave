@@ -1,3 +1,13 @@
+## [1.26.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.3...v1.26.4) (2026-01-04)
+
+### 🐛 Bug Fixes
+
+* fix template 1-5 not 0-4 ([dded804](https://github.com/pynickle/koishi-plugin-echo-cave/commit/dded80469c3179afb22b80719ae1c9cf5ba8e637))
+
+### 📚 Documentation
+
+* update document ([6101502](https://github.com/pynickle/koishi-plugin-echo-cave/commit/6101502c9d02d3738209809d5d82b3ed21117d2d))
+
 ## [1.26.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.2...v1.26.3) (2025-12-31)
 
 ### 🔧 Miscellaneous Changes
