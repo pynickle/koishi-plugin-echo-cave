@@ -19,6 +19,7 @@
 - 🎨 **模板化展示**：消息展示时自带多种风格的外部包裹信息
 - 🔒 **管理员保护**：可配置管理员消息保护
 - 📏 **媒体限制**：支持配置媒体文件大小限制
+- 👥 **转发消息用户选择**：支持从转发消息中选择相关用户进行绑定
 
 ## 📋 命令列表
 
@@ -61,6 +62,8 @@ npm install koishi-plugin-echo-cave
 | `useBase64ForMedia`          | boolean | `false` | 是否使用 Base64 编码发送媒体文件          |
 | `sendAllAsForwardMsg`        | boolean | `false` | 是否将所有消息以转发消息形式发送              |
 | `rankingTopCount`            | number  | `10`    | 排行榜显示的用户数量                    |
+| `forwardSelectTimeout`       | number  | `20`    | 转发消息用户选择超时时间（秒）              |
+| `enableForwardUserSelection` | boolean | `true`  | 启用转发消息用户选择功能                  |
 
 ## 📝 注意事项
 
@@ -71,6 +74,8 @@ npm install koishi-plugin-echo-cave
 - 支持媒体文件大小限制，可通过配置项调整
 - 自动检测并避免存储重复消息
 - 支持嵌套转发消息的递归处理
+- 转发消息可选择相关用户进行绑定，超时后自动跳过
+- 可通过配置项禁用转发消息用户选择功能或调整超时时间
 
 ## 🤝 贡献指南
 
