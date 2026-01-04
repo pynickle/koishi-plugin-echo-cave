@@ -56,7 +56,7 @@ export async function sendCaveMsg(
     if (shouldSendAsForward) {
         // Get forward templates, filtering out empty ones
         const availableTemplates: string[] = [];
-        for (let i = 0; i < TEMPLATE_COUNT; i++) {
+        for (let i = 1; i <= TEMPLATE_COUNT; i++) {
             const template = session.text(`echo-cave.templates.forward.${i}`, templateData);
             if (template.trim() !== '') {
                 availableTemplates.push(template);
@@ -104,7 +104,7 @@ export async function sendCaveMsg(
 
     // Get msg templates, filtering out empty ones
     const availableTemplates: Array<{ prefix: string; suffix: string }> = [];
-    for (let i = 0; i < TEMPLATE_COUNT; i++) {
+    for (let i = 1; i <= TEMPLATE_COUNT; i++) {
         const prefix = session.text(`echo-cave.templates.msg.${i}.prefix`, templateData);
         const suffix = session.text(`echo-cave.templates.msg.${i}.suffix`, templateData);
         if (prefix.trim() !== '' && suffix.trim() !== '') {
