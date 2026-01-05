@@ -1,3 +1,9 @@
+## [1.26.5](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.4...v1.26.5) (2026-01-05)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency oxlint to ^1.37.0 ([12d62e2](https://github.com/pynickle/koishi-plugin-echo-cave/commit/12d62e2375345fe6f0afbab2d26f64399a18c9ef))
+
 ## [1.26.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.3...v1.26.4) (2026-01-04)
 
 ### 🐛 Bug Fixes
