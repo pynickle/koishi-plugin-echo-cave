@@ -1,4 +1,4 @@
-import { checkUsersInGroup } from '../../adapters/onebot/user';
+import { checkUsersInGroup, getUserName } from '../../adapters/onebot/user';
 import { parseUserIds } from '../../utils/msg/element-helper';
 import { Context, Session, $ } from 'koishi';
 
@@ -42,7 +42,8 @@ export async function searchCave(ctx: Context, session: Session, userIds: string
     );
 
     if (matchingCaves.length === 0) {
-        return session.text('.noMatchingCaves', [targetUserId]);
+        const userName = await getUserName(ctx, session, targetUserId);
+        return session.text('.noMatchingCaves', [userName]);
     }
 
     const caveIds = matchingCaves.map((cave) => cave.id).join(', ');
