@@ -1,3 +1,13 @@
+## [1.26.9](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.8...v1.26.9) (2026-01-20)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @types/node to ^24.10.7 ([0ed5d88](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0ed5d8829536fa60bac4d8d1d4e85eed19787957))
+* **deps:** update dependency @types/node to ^24.10.9 ([a4d1997](https://github.com/pynickle/koishi-plugin-echo-cave/commit/a4d19971fafacf31a06e1c6da028237f60fd0bb4))
+* **deps:** update dependency oxfmt to ^0.24.0 ([37141f8](https://github.com/pynickle/koishi-plugin-echo-cave/commit/37141f8b5185476c006955d7bc6384c4462411d8))
+* **deps:** update dependency oxlint to ^1.39.0 ([ce4d32f](https://github.com/pynickle/koishi-plugin-echo-cave/commit/ce4d32fe7341e7688cb578ee76dc507adce9d164))
+* **deps:** update dependency pnpm to v10.28.1 ([abeda04](https://github.com/pynickle/koishi-plugin-echo-cave/commit/abeda0484fd7e6b45b197199f563eea16214d3b8))
+
 ## [1.26.8](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.7...v1.26.8) (2026-01-10)
 
 ### 🔧 Miscellaneous Changes
