@@ -1,3 +1,9 @@
+## [1.27.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.0...v1.27.1) (2026-01-20)
+
+### 🚀 Improvements
+
+* use username instead of userid when no caves are found related to user ([3fa42e2](https://github.com/pynickle/koishi-plugin-echo-cave/commit/3fa42e20902f1cd8f7c474cb7c06786126ce1981))
+
 ## [1.27.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.11...v1.27.0) (2026-01-20)
 
 ### ✨ Features
