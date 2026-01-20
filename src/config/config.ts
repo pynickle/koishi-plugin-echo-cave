@@ -16,6 +16,7 @@ export interface Config {
     rankingTopCount?: number;
     forwardSelectTimeout?: number;
     enableForwardUserSelection?: boolean;
+    alpha?: number;
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -33,6 +34,7 @@ export const Config: Schema<Config> = Schema.object({
     rankingTopCount: Schema.number().default(10),
     forwardSelectTimeout: Schema.number().default(20),
     enableForwardUserSelection: Schema.boolean().default(true),
+    alpha: Schema.number().default(0.2).min(0).max(2),
 }).i18n({
     'zh-CN': zhCN,
 });

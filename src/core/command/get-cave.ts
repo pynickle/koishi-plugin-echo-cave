@@ -69,7 +69,38 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
             return session.text('.noMsgInCave');
         }
 
-        caveMsg = caves[Math.floor(Math.random() * caves.length)];
+        // Use weighted random selection based on drawCount
+        const alpha = cfg.alpha || 0.2;
+
+        // Calculate weights for each cave
+        const weights = caves.map((cave) => 1 / (1 + cave.drawCount * alpha));
+
+        // Calculate total weight
+        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+        // Generate a random number between 0 and totalWeight
+        let random = Math.random() * totalWeight;
+
+        // Select cave based on weights
+        let selectedIndex = 0;
+        while (random > weights[selectedIndex]) {
+            random -= weights[selectedIndex];
+            selectedIndex++;
+        }
+
+        caveMsg = caves[selectedIndex];
+
+        // Update drawCount for the selected cave
+        await ctx.database.set(
+            'echo_cave_v2',
+            {
+                id: caveMsg.id,
+                channelId,
+            },
+            {
+                drawCount: caveMsg.drawCount + 1,
+            }
+        );
     } else {
         const caves = await ctx.database.get('echo_cave_v2', {
             id,
@@ -81,6 +112,18 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
         }
 
         caveMsg = caves[0];
+
+        // Update drawCount for the specified cave
+        await ctx.database.set(
+            'echo_cave_v2',
+            {
+                id,
+                channelId,
+            },
+            {
+                drawCount: caveMsg.drawCount + 1,
+            }
+        );
     }
 
     await sendCaveMsg(ctx, session, caveMsg, cfg);

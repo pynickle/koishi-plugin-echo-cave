@@ -23,6 +23,7 @@ export interface EchoCave {
     type: 'forward' | 'msg';
     content: string;
     relatedUsers: string[];
+    drawCount: number;
 }
 
 declare module 'koishi' {
@@ -46,6 +47,7 @@ export function apply(ctx: Context, cfg: Config) {
             type: 'string',
             content: 'text',
             relatedUsers: 'list',
+            drawCount: { type: 'unsigned', default: 0 },
         },
         {
             primary: 'id',
@@ -64,6 +66,7 @@ export function apply(ctx: Context, cfg: Config) {
             type: 'string',
             content: 'text',
             relatedUsers: 'list',
+            drawCount: { type: 'unsigned', default: 0 },
         },
         {
             primary: 'id',
