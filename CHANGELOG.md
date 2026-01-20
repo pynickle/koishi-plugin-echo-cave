@@ -1,3 +1,13 @@
+## [1.27.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.11...v1.27.0) (2026-01-20)
+
+### ✨ Features
+
+* add fake random ([dd365d0](https://github.com/pynickle/koishi-plugin-echo-cave/commit/dd365d0960033024e14ee1f1e0af90ebb1b6e864))
+
+### 🐛 Bug Fixes
+
+* fix the wrong arg ([2be7996](https://github.com/pynickle/koishi-plugin-echo-cave/commit/2be799690d5b619060d0c7ee25135032669b46f3))
+
 ## [1.26.11](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.26.10...v1.26.11) (2026-01-20)
 
 ### 🔧 Miscellaneous Changes
