@@ -47,7 +47,7 @@ export function apply(ctx: Context, cfg: Config) {
             type: 'string',
             content: 'text',
             relatedUsers: 'list',
-            drawCount: { type: 'unsigned', default: 0 },
+            drawCount: { type: 'unsigned', initial: 0 },
         },
         {
             primary: 'id',
@@ -66,7 +66,7 @@ export function apply(ctx: Context, cfg: Config) {
             type: 'string',
             content: 'text',
             relatedUsers: 'list',
-            drawCount: { type: 'unsigned', default: 0 },
+            drawCount: { type: 'unsigned', initial: 0 },
         },
         {
             primary: 'id',
