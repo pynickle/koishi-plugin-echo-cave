@@ -1,3 +1,9 @@
+## [1.27.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.3...v1.27.4) (2026-01-31)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency semantic-release to ^25.0.3 ([7003fa3](https://github.com/pynickle/koishi-plugin-echo-cave/commit/7003fa3872d2ccdad32f32b7474bf92dfd6958c0))
+
 ## [1.27.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.2...v1.27.3) (2026-01-28)
 
 ### 🔧 Miscellaneous Changes
