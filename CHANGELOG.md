@@ -1,3 +1,10 @@
+## [1.27.8](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.7...v1.27.8) (2026-02-08)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @types/node to ^24.10.12 ([f982326](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f98232681cb8502cd03f9f8b6a8f821d4a175e66))
+* **deps:** update dependency pnpm to v10.29.1 ([ecc0264](https://github.com/pynickle/koishi-plugin-echo-cave/commit/ecc0264bab9027d246ece6f0dab421032c5936a3))
+
 ## [1.27.7](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.6...v1.27.7) (2026-02-06)
 
 ### 🔧 Miscellaneous Changes
