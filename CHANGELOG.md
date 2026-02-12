@@ -1,3 +1,9 @@
+## [1.27.9](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.8...v1.27.9) (2026-02-12)
+
+### ⚡ Performance Improvements
+
+* improve media helper ([0aab186](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0aab186627a353eb74545e46f7145e0269ca1de0))
+
 ## [1.27.8](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.7...v1.27.8) (2026-02-08)
 
 ### 🔧 Miscellaneous Changes
