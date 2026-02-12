@@ -5,6 +5,56 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
+// LRU Cache for base64 conversions
+class LRUCache<K, V> {
+    private cache: Map<K, V>;
+    private maxSize: number;
+
+    constructor(maxSize: number = 100) {
+        this.cache = new Map();
+        this.maxSize = maxSize;
+    }
+
+    get(key: K): V | undefined {
+        if (!this.cache.has(key)) return undefined;
+
+        // Move to end (most recently used)
+        const value = this.cache.get(key)!;
+        this.cache.delete(key);
+        this.cache.set(key, value);
+        return value;
+    }
+
+    set(key: K, value: V): void {
+        // Remove if exists
+        if (this.cache.has(key)) {
+            this.cache.delete(key);
+        }
+
+        // Add to end
+        this.cache.set(key, value);
+
+        // Remove oldest if over limit
+        if (this.cache.size > this.maxSize) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+    }
+
+    clear(): void {
+        this.cache.clear();
+    }
+}
+
+// Global cache for base64 data
+const base64Cache = new LRUCache<string, string>(200);
+
+// Debounce timer for cleanup operations
+const cleanupTimers: Map<string, NodeJS.Timeout> = new Map();
+
+// Counter to reduce cleanup frequency
+const saveCounters: Map<string, number> = new Map();
+
 export async function saveMedia(
     ctx: Context,
     mediaElement: Record<string, any>,
@@ -28,7 +78,7 @@ export async function saveMedia(
     })();
 
     const mediaDir = path.join(ctx.baseDir, 'data', 'cave', type + 's');
-    const mediaName = uuidv4().replace(/-/g, ''); // 移除连字符，生成唯一文件名
+    const mediaName = uuidv4().replace(/-/g, '');
     const fullMediaPath = path.join(mediaDir, `${mediaName}.${ext}`);
 
     ctx.logger.info(`Saving ${type} from ${mediaUrl} -> ${fullMediaPath}`);
@@ -39,6 +89,7 @@ export async function saveMedia(
         const res = await axios.get(mediaUrl, {
             responseType: 'arraybuffer',
             validateStatus: () => true,
+            timeout: 30000,
         });
 
         if (res.status < 200 || res.status >= 300) {
@@ -78,17 +129,35 @@ export async function saveMedia(
         await fs.writeFile(fullMediaPath, buffer);
 
         ctx.logger.info(
-            `${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully: ${fullMediaPath}`
+            `${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully: ${fullMediaPath} (${(buffer.length / (1024 * 1024)).toFixed(2)} MB)`
         );
 
-        // Check and clean media files after saving
-        await checkAndCleanMediaFiles(ctx, cfg, type);
+        await debouncedCleanup(ctx, cfg, type);
 
         return fullMediaPath;
     } catch (err) {
         ctx.logger.error(`Failed to save ${type}: ${err}`);
         return mediaUrl;
     }
+}
+
+async function debouncedCleanup(
+    ctx: Context,
+    cfg: Config,
+    type: 'image' | 'video' | 'file' | 'record'
+) {
+    const key = type;
+
+    if (cleanupTimers.has(key)) {
+        clearTimeout(cleanupTimers.get(key)!);
+    }
+
+    const timer = setTimeout(async () => {
+        await checkAndCleanMediaFiles(ctx, cfg, type);
+        cleanupTimers.delete(key);
+    }, 5000);
+
+    cleanupTimers.set(key, timer);
 }
 
 export async function processMediaElement(ctx: Context, element: any, cfg: Config) {
@@ -121,7 +190,7 @@ export async function processMediaElement(ctx: Context, element: any, cfg: Confi
     return element;
 }
 
-// Convert file URI to base64 data URL
+// Convert file URI to base64 data URL with caching
 export async function convertFileUriToBase64(ctx: Context, element: any): Promise<any> {
     if (
         element.type === 'image' ||
@@ -133,21 +202,68 @@ export async function convertFileUriToBase64(ctx: Context, element: any): Promis
         const fileUri = element.data.file;
         const filePath = decodeURIComponent(fileUri.replace('file:///', ''));
 
+        // 检查缓存
+        const cachedData = base64Cache.get(filePath);
+        if (cachedData) {
+            ctx.logger.debug(`Using cached base64 for: ${filePath}`);
+            return {
+                ...element,
+                data: {
+                    ...element.data,
+                    file: cachedData,
+                },
+            };
+        }
+
         try {
+            const startTime = Date.now();
+
             // Read file content and convert to base64
             const buffer = await fs.readFile(filePath);
             const base64 = buffer.toString('base64');
 
             // Determine MIME type
+            const ext = path.extname(filePath).toLowerCase();
             const mimeTypes: Record<string, string> = {
-                image: 'image/jpeg',
-                video: 'video/mp4',
-                record: 'audio/mpeg',
-                file: 'application/octet-stream',
+                // Images
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp',
+                // Videos
+                '.mp4': 'video/mp4',
+                '.webm': 'video/webm',
+                '.mov': 'video/quicktime',
+                // Audio
+                '.mp3': 'audio/mpeg',
+                '.wav': 'audio/wav',
+                '.ogg': 'audio/ogg',
             };
 
-            const mimeType = mimeTypes[element.type] || 'application/octet-stream';
+            const mimeType =
+                mimeTypes[ext] ||
+                (() => {
+                    switch (element.type) {
+                        case 'image':
+                            return 'image/jpeg';
+                        case 'video':
+                            return 'video/mp4';
+                        case 'record':
+                            return 'audio/mpeg';
+                        default:
+                            return 'application/octet-stream';
+                    }
+                })();
+
             const dataUrl = `data:${mimeType};base64,${base64}`;
+
+            base64Cache.set(filePath, dataUrl);
+
+            const duration = Date.now() - startTime;
+            ctx.logger.debug(
+                `Converted ${element.type} to base64: ${filePath} (${(buffer.length / (1024 * 1024)).toFixed(2)} MB, ${duration}ms)`
+            );
 
             return {
                 ...element,
@@ -191,6 +307,7 @@ export async function checkAndCleanMediaFiles(
         return;
     }
 
+    const startTime = Date.now();
     const mediaDir = path.join(ctx.baseDir, 'data', 'cave', type + 's');
     const maxSize = (() => {
         switch (type) {
@@ -207,7 +324,13 @@ export async function checkAndCleanMediaFiles(
 
     try {
         // Get all files in the directory
-        const files = await fs.readdir(mediaDir);
+        let files: string[];
+        try {
+            files = await fs.readdir(mediaDir);
+        } catch (err) {
+            return;
+        }
+
         if (files.length === 0) {
             return;
         }
@@ -216,35 +339,51 @@ export async function checkAndCleanMediaFiles(
         const fileInfos = await Promise.all(
             files.map(async (file) => {
                 const filePath = path.join(mediaDir, file);
-                const stats = await fs.stat(filePath);
-                return {
-                    path: filePath,
-                    size: stats.size,
-                    mtime: stats.mtimeMs,
-                };
+                try {
+                    const stats = await fs.stat(filePath);
+                    return {
+                        path: filePath,
+                        size: stats.size,
+                        mtime: stats.mtimeMs,
+                    };
+                } catch (err) {
+                    return null;
+                }
             })
         );
 
+        const validFileInfos = fileInfos.filter(
+            (info): info is NonNullable<typeof info> => info !== null
+        );
+
+        if (validFileInfos.length === 0) {
+            return;
+        }
+
         // Calculate total size
-        const totalSize = fileInfos.reduce((sum, file) => sum + file.size, 0);
-        ctx.logger.info(
-            `${type} directory total size: ${(totalSize / (1024 * 1024)).toFixed(2)} MB, max allowed: ${(maxSize / (1024 * 1024)).toFixed(2)} MB`
+        const totalSize = validFileInfos.reduce((sum, file) => sum + file.size, 0);
+
+        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+        const maxSizeMB = (maxSize / (1024 * 1024)).toFixed(2);
+
+        ctx.logger.debug(
+            `${type} directory: ${validFileInfos.length} files, ${totalSizeMB} MB / ${maxSizeMB} MB`
         );
 
         // If total size exceeds limit, delete the oldest files
         if (totalSize > maxSize) {
             ctx.logger.warn(
-                `${type} directory size exceeds limit! Total: ${(totalSize / (1024 * 1024)).toFixed(2)} MB, Max: ${(maxSize / (1024 * 1024)).toFixed(2)} MB`
+                `${type} directory size exceeds limit! Total: ${totalSizeMB} MB, Max: ${maxSizeMB} MB`
             );
 
             // Sort by modification time, oldest files first
-            fileInfos.sort((a, b) => a.mtime - b.mtime);
+            validFileInfos.sort((a, b) => a.mtime - b.mtime);
 
             let currentSize = totalSize;
-            let filesToDelete = [];
+            const filesToDelete: typeof validFileInfos = [];
 
             // Calculate which files to delete
-            for (const file of fileInfos) {
+            for (const file of validFileInfos) {
                 if (currentSize <= maxSize) {
                     break;
                 }
@@ -252,17 +391,40 @@ export async function checkAndCleanMediaFiles(
                 currentSize -= file.size;
             }
 
-            // Delete files
-            for (const file of filesToDelete) {
-                await fs.unlink(file.path);
-                ctx.logger.info(
-                    `Deleted oldest ${type} file: ${path.basename(file.path)} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`
-                );
-            }
+            const deleteResults = await Promise.allSettled(
+                filesToDelete.map(async (file) => {
+                    await fs.unlink(file.path);
 
-            ctx.logger.info(
-                `Cleanup completed. ${type} directory new size: ${(currentSize / (1024 * 1024)).toFixed(2)} MB`
+                    base64Cache.get(file.path);
+
+                    return file;
+                })
             );
+
+            let deletedCount = 0;
+            let deletedSize = 0;
+
+            deleteResults.forEach((result, index) => {
+                if (result.status === 'fulfilled') {
+                    deletedCount++;
+                    deletedSize += filesToDelete[index].size;
+                    ctx.logger.info(
+                        `Deleted old ${type}: ${path.basename(filesToDelete[index].path)} (${(filesToDelete[index].size / (1024 * 1024)).toFixed(2)} MB)`
+                    );
+                } else {
+                    ctx.logger.warn(
+                        `Failed to delete ${type}: ${path.basename(filesToDelete[index].path)} - ${result.reason}`
+                    );
+                }
+            });
+
+            const duration = Date.now() - startTime;
+            ctx.logger.info(
+                `Cleanup completed in ${duration}ms: deleted ${deletedCount}/${filesToDelete.length} files (${(deletedSize / (1024 * 1024)).toFixed(2)} MB), new size: ${((totalSize - deletedSize) / (1024 * 1024)).toFixed(2)} MB`
+            );
+        } else {
+            const duration = Date.now() - startTime;
+            ctx.logger.debug(`${type} check completed in ${duration}ms: no cleanup needed`);
         }
     } catch (err) {
         ctx.logger.error(`Failed to check and clean ${type} files: ${err}`);
@@ -271,6 +433,9 @@ export async function checkAndCleanMediaFiles(
 
 // Delete media files contained in messages
 export async function deleteMediaFilesFromMessage(ctx: Context, content: string) {
+    const deletedFiles: string[] = [];
+    const failedFiles: string[] = [];
+
     async function processElement(element: any) {
         if (
             element.type === 'image' ||
@@ -287,16 +452,21 @@ export async function deleteMediaFilesFromMessage(ctx: Context, content: string)
                 try {
                     await fs.access(filePath);
                     await fs.unlink(filePath);
-                    ctx.logger.info(`Deleted media file: ${filePath}`);
+
+                    base64Cache.get(filePath);
+
+                    deletedFiles.push(filePath);
+                    ctx.logger.debug(`Deleted media file: ${filePath}`);
                 } catch (err) {
+                    failedFiles.push(filePath);
                     ctx.logger.warn(`Failed to delete media file: ${filePath}, error: ${err}`);
                 }
             }
         } else if (element.type === 'node' && element.data?.content) {
             // Recursively process content elements in node type
-            for (const contentElement of element.data.content) {
-                await processElement(contentElement);
-            }
+            await Promise.all(
+                element.data.content.map((contentElement: any) => processElement(contentElement))
+            );
         }
     }
 
@@ -304,8 +474,13 @@ export async function deleteMediaFilesFromMessage(ctx: Context, content: string)
         const elements = JSON.parse(content);
         const mediaElements = Array.isArray(elements) ? elements : [elements];
 
-        for (const element of mediaElements) {
-            await processElement(element);
+        await Promise.all(mediaElements.map((element) => processElement(element)));
+
+        if (deletedFiles.length > 0) {
+            ctx.logger.info(`Deleted ${deletedFiles.length} media file(s) from message`);
+        }
+        if (failedFiles.length > 0) {
+            ctx.logger.warn(`Failed to delete ${failedFiles.length} media file(s)`);
         }
     } catch (err) {
         ctx.logger.error(`Failed to parse message content when deleting media: ${err}`);
