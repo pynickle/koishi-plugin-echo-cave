@@ -1,3 +1,14 @@
+## [1.27.16](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.15...v1.27.16) (2026-03-04)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @semantic-release/npm to ^13.1.5 ([b65e053](https://github.com/pynickle/koishi-plugin-echo-cave/commit/b65e0532579d86d458b0712a68d35d5bae9f11a4))
+* **deps:** update dependency @types/node to ^24.11.0 ([5537426](https://github.com/pynickle/koishi-plugin-echo-cave/commit/5537426bba3477c263298deecd5c1d9e35086ff2))
+* **deps:** update dependency axios to ^1.13.6 ([272c9ae](https://github.com/pynickle/koishi-plugin-echo-cave/commit/272c9aec9d9d35a11e793b1b480b98968af0c181))
+* **deps:** update dependency conventional-changelog-conventionalcommits to ^9.2.0 ([48da9cb](https://github.com/pynickle/koishi-plugin-echo-cave/commit/48da9cb8875e8280100dba259132c3d89bc13146))
+* **deps:** update dependency oxlint to ^1.51.0 ([9e458e2](https://github.com/pynickle/koishi-plugin-echo-cave/commit/9e458e21814c34aa12e2b173ab3fb73b741d4848))
+* **deps:** update dependency pnpm to v10.30.3 ([c835cf6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c835cf6aec344c6d8f88d87822c746a6e93e1056))
+
 ## [1.27.15](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.14...v1.27.15) (2026-02-24)
 
 ### 🔧 Miscellaneous Changes
