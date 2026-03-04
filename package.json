@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@pynickle/koishi-plugin-adapter-onebot": "^1.0.0",
-    "axios": "^1.13.5",
+    "axios": "^1.13.6",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
