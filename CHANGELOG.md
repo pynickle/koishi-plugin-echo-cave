@@ -1,3 +1,10 @@
+## [1.27.17](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.16...v1.27.17) (2026-03-07)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @types/node to ^24.12.0 ([0e455de](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0e455de44bb9e022c846849a493951547bef15cc))
+* **deps:** update dependency oxfmt to ^0.36.0 ([4f6b611](https://github.com/pynickle/koishi-plugin-echo-cave/commit/4f6b611e5c31c6bd29c24468cc9e7825702ee189))
+
 ## [1.27.16](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.15...v1.27.16) (2026-03-04)
 
 ### 🔧 Miscellaneous Changes
