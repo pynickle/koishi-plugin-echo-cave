@@ -1,3 +1,10 @@
+## [1.27.18](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.17...v1.27.18) (2026-03-08)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency conventional-changelog-conventionalcommits to ^9.3.0 ([8a07495](https://github.com/pynickle/koishi-plugin-echo-cave/commit/8a07495919b6d202c2c5f5487da788c3d92120ee))
+* **deps:** update dependency pnpm to v10.31.0 ([f58c719](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f58c71991c4c28ba17c926d2de528bf3c86a586e))
+
 ## [1.27.17](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.16...v1.27.17) (2026-03-07)
 
 ### 🔧 Miscellaneous Changes
