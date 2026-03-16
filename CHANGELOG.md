@@ -1,3 +1,11 @@
+## [1.27.19](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.18...v1.27.19) (2026-03-16)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency esbuild to ^0.27.4 ([ae906d6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/ae906d69320ba9acfaaece99322260e3810b81bf))
+* **deps:** update dependency oxlint to ^1.56.0 ([9f8dfc6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/9f8dfc6e2d8174a0929bdc0d4b3b4b725f1f45b8))
+* **deps:** update dependency pnpm to v10.32.1 ([3af6bc1](https://github.com/pynickle/koishi-plugin-echo-cave/commit/3af6bc1961c2399d4d3055e514b6d7f8cb109574))
+
 ## [1.27.18](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.17...v1.27.18) (2026-03-08)
 
 ### 🔧 Miscellaneous Changes
