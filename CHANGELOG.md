@@ -1,3 +1,9 @@
+## [1.27.22](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.21...v1.27.22) (2026-03-17)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update pnpm/action-setup action to v5 ([214a42e](https://github.com/pynickle/koishi-plugin-echo-cave/commit/214a42e70949f6b17d62b6005b83424fa453356e))
+
 ## [1.27.21](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.20...v1.27.21) (2026-03-17)
 
 ### 🔧 Miscellaneous Changes
