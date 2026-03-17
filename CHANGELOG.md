@@ -1,3 +1,9 @@
+## [1.27.21](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.20...v1.27.21) (2026-03-17)
+
+### 🔧 Miscellaneous Changes
+
+* update deps ([1d8174a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/1d8174ae5de58e9d1f31e04ddc7c5d4617f4360c))
+
 ## [1.27.20](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.19...v1.27.20) (2026-03-17)
 
 ### 🔧 Miscellaneous Changes
