@@ -1,11 +1,16 @@
 import { checkUsersInGroup, getUserName } from '../../adapters/onebot/user';
 import { Config } from '../../config/config';
+import { messageContainsMedia, processStoredMessageMedia } from '../../utils/media/media-helper';
 import { parseUserIds } from '../../utils/msg/element-helper';
 import { listenForUserMessage } from '../../utils/msg/message-listener';
 import { reconstructForwardMsg } from '../parser/forward-parser';
 import { processMessageContent } from '../parser/msg-parser';
 import { CQCode } from '@pynickle/koishi-plugin-adapter-onebot';
 import { Context, Session } from 'koishi';
+
+interface ProgressState {
+    progressMessageIds?: string[];
+}
 
 export async function addCave(ctx: Context, session: Session, cfg: Config, userIds?: string[]) {
     if (!session.guildId) {
@@ -43,6 +48,8 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
     let content: string | CQCode[];
     let type: 'forward' | 'msg';
     let forwardUsers: { userId: string; nickname: string }[] = [];
+    let hasMedia = false;
+    let needsDeferredMediaProcessing = false;
 
     if (quote.elements[0].type === 'forward') {
         type = 'forward';
@@ -51,8 +58,12 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
             ctx,
             session,
             await session.onebot.getForwardMsg(messageId),
-            cfg
+            cfg,
+            false
         );
+
+        hasMedia = await messageContainsMedia(message);
+        needsDeferredMediaProcessing = true;
 
         content = JSON.stringify(message);
 
@@ -94,7 +105,13 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
             msgJson = message;
         }
 
-        content = JSON.stringify(await processMessageContent(ctx, msgJson, cfg, channelId));
+        hasMedia = await messageContainsMedia(msgJson);
+
+        content = JSON.stringify(
+            await processMediaWithOptionalProgress(session, cfg, hasMedia, async (progressOptions) =>
+                await processMessageContent(ctx, msgJson, cfg, channelId, progressOptions)
+            )
+        );
     }
 
     // If it's a forward message with users and user selection is enabled, ask the user to select related users
@@ -162,15 +179,25 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         selectedUsersWithNames = await userSelectionPromise;
     }
 
-    // Extract final user IDs for database
-    const finalParsedUserIds = selectedUsersWithNames.map((user) => user.userId);
+    if (needsDeferredMediaProcessing) {
+        content = await processMediaWithOptionalProgress(session, cfg, hasMedia, async (progressOptions) =>
+            await processStoredMessageMedia(ctx, content as string, cfg, channelId, progressOptions)
+        );
+    }
 
-    // Format related users for response
-    const originName = await getUserName(ctx, session, quote.user.id);
-    const relatedUsersFormatted =
+    const finalParsedUserIds =
         selectedUsersWithNames.length !== 0
-            ? selectedUsersWithNames.map((user) => user.nickname).join(', ')
-            : originName;
+            ? selectedUsersWithNames.map((user) => user.userId)
+            : parsedUserIds;
+
+    const originName = await getUserName(ctx, session, quote.user.id);
+    const relatedUsersFormatted = await formatRelatedUsers(
+        ctx,
+        session,
+        selectedUsersWithNames,
+        finalParsedUserIds,
+        originName
+    );
 
     try {
         const result = await ctx.database.create('echo_cave_v2', {
@@ -187,4 +214,55 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
     } catch (error) {
         return session.text('.msgFailedToSave');
     }
+}
+
+async function processMediaWithOptionalProgress<T>(
+    session: Session,
+    cfg: Config,
+    hasMedia: boolean,
+    action: (progressOptions?: { session: Session; state: ProgressState }) => Promise<T>
+): Promise<T> {
+    const shouldShowProgress = cfg.mediaStorage === 's3' && hasMedia;
+    const state: ProgressState = {};
+
+    try {
+        return await action(shouldShowProgress ? { session, state } : undefined);
+    } finally {
+        await tryDeleteProgressMessages(session, state.progressMessageIds);
+    }
+}
+
+async function tryDeleteProgressMessages(session: Session, messageIds?: string[]) {
+    if (!messageIds || messageIds.length === 0) {
+        return;
+    }
+
+    for (const messageId of messageIds) {
+        try {
+            await session.bot.deleteMessage(session.channelId, messageId);
+        } catch (error) {
+            session.app.logger('echo-cave').warn(`Failed to delete progress message ${messageId}: ${error}`);
+        }
+    }
+}
+
+async function formatRelatedUsers(
+    ctx: Context,
+    session: Session,
+    selectedUsersWithNames: Array<{ userId: string; nickname: string }>,
+    relatedUserIds: string[],
+    originName: string
+) {
+    if (selectedUsersWithNames.length !== 0) {
+        return selectedUsersWithNames.map((user) => user.nickname).join(', ');
+    }
+
+    if (relatedUserIds.length !== 0) {
+        const relatedUserNames = await Promise.all(
+            relatedUserIds.map(async (relatedUserId) => await getUserName(ctx, session, relatedUserId))
+        );
+        return relatedUserNames.join(', ');
+    }
+
+    return originName;
 }

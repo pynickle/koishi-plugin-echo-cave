@@ -8,7 +8,7 @@ import {
     S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Context } from 'koishi';
+import { Context, Session } from 'koishi';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -65,6 +65,15 @@ interface LoadedMedia {
     buffer: Buffer;
     contentType?: string;
     sourceKey: string;
+}
+
+interface MediaSaveProgressState {
+    progressMessageIds?: string[];
+}
+
+interface MediaSaveProgressOptions {
+    session: Session;
+    state: MediaSaveProgressState;
 }
 
 interface CaveMediaRefs {
@@ -982,6 +991,20 @@ async function mutateMessageContent(
     };
 }
 
+export async function processStoredMessageMedia(
+    ctx: Context,
+    content: string,
+    cfg: Config,
+    channelId: string,
+    progressOptions?: MediaSaveProgressOptions
+): Promise<string> {
+    const rewritten = await mutateMessageContent(ctx, content, async (element) => {
+        return (await processMediaElement(ctx, element, cfg, channelId, progressOptions)) as MaybeMediaElement;
+    });
+
+    return rewritten.content;
+}
+
 async function collectMessageMediaRefs(ctx: Context, content: string): Promise<string[]> {
     const parsed = JSON.parse(content);
     const elements = Array.isArray(parsed) ? parsed : [parsed];
@@ -1178,7 +1201,8 @@ export async function saveMedia(
     mediaElement: Record<string, unknown>,
     type: MediaType,
     cfg: Config,
-    channelId: string
+    channelId: string,
+    progressOptions?: MediaSaveProgressOptions
 ) {
     const mediaUrl = typeof mediaElement.url === 'string' ? mediaElement.url : '';
     const originalMediaName =
@@ -1192,6 +1216,8 @@ export async function saveMedia(
     }
 
     try {
+        await ensureMediaSaveProgress(progressOptions);
+
         const response = await axios.get(mediaUrl, {
             responseType: 'arraybuffer',
             validateStatus: () => true,
@@ -1257,10 +1283,18 @@ export async function processMediaElement(
     ctx: Context,
     element: MaybeMediaElement,
     cfg: Config,
-    channelId: string
+    channelId: string,
+    progressOptions?: MediaSaveProgressOptions
 ) {
     if (isMediaType(element.type)) {
-        const savedPath = await saveMedia(ctx, element.data || {}, element.type, cfg, channelId);
+        const savedPath = await saveMedia(
+            ctx,
+            element.data || {},
+            element.type,
+            cfg,
+            channelId,
+            progressOptions
+        );
         const fileRef =
             typeof savedPath === 'string' && isS3Uri(savedPath)
                 ? savedPath
@@ -1281,6 +1315,46 @@ export async function processMediaElement(
     }
 
     return element;
+}
+
+export async function messageContainsMedia(content: unknown): Promise<boolean> {
+    const elements = Array.isArray(content) ? content : [content];
+
+    const hasMedia = async (element: MaybeMediaElement): Promise<boolean> => {
+        if (isMediaType(element.type)) {
+            return true;
+        }
+
+        const nestedContent = element.data?.content;
+        if (element.type === 'node' && Array.isArray(nestedContent)) {
+            for (const child of nestedContent) {
+                if (await hasMedia(child as MaybeMediaElement)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    };
+
+    for (const element of elements) {
+        if (await hasMedia(element as MaybeMediaElement)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+async function ensureMediaSaveProgress(progressOptions?: MediaSaveProgressOptions) {
+    if (!progressOptions || progressOptions.state.progressMessageIds?.length) {
+        return;
+    }
+
+    const { session, state } = progressOptions;
+    state.progressMessageIds = await session.send(
+        session.text('commands.cave.echo.messages.mediaSaving')
+    );
 }
 
 export async function resolveMediaElementForSend(

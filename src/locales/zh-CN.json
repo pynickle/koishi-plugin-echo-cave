@@ -33,13 +33,21 @@
     "cave": {
       "description": "随机获取 / 获取特定 id 的回声洞信息",
       "messages": {
-        "noMsgInCave": "🚀 回声洞中暂无消息，快使用 \"cave.echo\" 命令添加第一条消息吧！"
+        "noMsgInCave": "🚀 回声洞中暂无消息，快使用 \"cave.echo\" 命令添加第一条消息吧！",
+        "sendPartialFailure": "⚠️ 回声洞标题已发送，但正文发送失败了，请稍后再试。",
+        "sendFailedAutoDeleted": "⚠️ 回声洞 #{id} 发送失败，已自动从回声洞删除。错误：{errorMessage}",
+        "sendFailedAutoDeleteAlsoFailed": "⚠️ 回声洞 #{id} 发送失败，且自动删除也失败了，请管理员尽快处理。发送错误：{errorMessage}；删除错误：{deleteErrorMessage}",
+        "sendFailedRecordedForDailyReport": "⚠️ 回声洞 #{id} 发送失败，已记录本次异常，并将在每日 {summaryTime} 汇总上报给管理员 {adminId}。错误：{errorMessage}",
+        "sendFailedRecordedWithoutAdmin": "⚠️ 回声洞 #{id} 发送失败，已记录本次异常，但尚未配置日报管理员，暂时无法上报。当前汇总时间：{summaryTime}。错误：{errorMessage}",
+        "sendFailedReportRecordFailed": "⚠️ 回声洞 #{id} 发送失败，而且异常记录写入失败，无法纳入日报，请检查数据库或日志。错误：{errorMessage}",
+        "sendFailedIgnored": "⚠️ 回声洞 #{id} 发送失败，当前配置为“不额外处理”，本次不会自动删除或上报管理员。错误：{errorMessage}"
       }
     },
     "cave.echo": {
       "description": "将消息存入回声洞",
       "messages": {
         "noMsgQuoted": "💡 请引用一条消息后再使用此命令！",
+        "mediaSaving": "⏳ 检测到媒体资源，正在存储媒体文件，请稍候……",
         "msgSaved": "✅ 回声洞消息已成功存入，消息 ID：{id}",
         "msgFailedToSave": "❌ 回声洞保存失败，请稍后重试！",
         "selectRelatedUsers": "请选择要关联的用户（以空格分隔序号，输入'all'选择全部）：",

@@ -8,6 +8,7 @@ import {
 } from './core/command/admin';
 import { deleteCave, deleteCaves } from './core/command/delete-cave';
 import { getCave, getCaveListByOriginUser, getCaveListByUser } from './core/command/get-cave';
+import { registerSendFailureSummaryScheduler } from './core/send-failure';
 import { bindUsersToCave } from './core/command/misc/bind-user';
 import { getRanking } from './core/command/rank';
 import { searchCave } from './core/command/search-cave';
@@ -32,10 +33,22 @@ export interface EchoCave {
     drawCount: number;
 }
 
+export interface EchoCaveSendFailure {
+    id: number;
+    caveId: number;
+    channelId: string;
+    guildId: string;
+    platform: string;
+    selfId: string;
+    failTime: Date;
+    errorMessage: string;
+}
+
 declare module 'koishi' {
     interface Tables {
         echo_cave: EchoCave;
         echo_cave_v2: EchoCave;
+        echo_cave_send_failure: EchoCaveSendFailure;
     }
 }
 
@@ -73,6 +86,24 @@ export function apply(ctx: Context, cfg: Config) {
             content: 'text',
             relatedUsers: 'list',
             drawCount: { type: 'unsigned', initial: 0 },
+        },
+        {
+            primary: 'id',
+            autoInc: true,
+        }
+    );
+
+    ctx.model.extend(
+        'echo_cave_send_failure',
+        {
+            id: 'unsigned',
+            caveId: 'unsigned',
+            channelId: 'string',
+            guildId: 'string',
+            platform: 'string',
+            selfId: 'string',
+            failTime: 'timestamp',
+            errorMessage: 'string',
         },
         {
             primary: 'id',
@@ -157,4 +188,6 @@ export function apply(ctx: Context, cfg: Config) {
         async ({ session }, idRanges) =>
             await inspectMediaRefsForMigration(ctx, session, cfg, idRanges)
     );
+
+    registerSendFailureSummaryScheduler(ctx, cfg);
 }

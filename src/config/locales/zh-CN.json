@@ -23,5 +23,8 @@
   "s3SecretAccessKey": "S3 Secret Access Key",
   "s3ForcePathStyle": "是否强制使用 path-style 访问 S3",
   "s3PathPrefix": "S3 存储路径前缀，会拼接在 v2/channel/type 目录前",
-  "s3PresignExpiresIn": "S3 私有对象预签名 URL 的有效期 (秒)"
+  "s3PresignExpiresIn": "S3 私有对象预签名 URL 的有效期 (秒)",
+  "sendFailureHandlingMode": "回声洞发送失败后的处理方式：自动删除、按日汇总上报或不额外处理",
+  "sendFailureSummaryAdminId": "发送失败日报的单独管理员 ID（不复用管理员 ID 列表）",
+  "sendFailureSummaryTime": "发送失败日报的每日发送时间，格式为 HH:mm"
 }

@@ -7,11 +7,13 @@ export async function processMessageContent(
     ctx: Context,
     msg: CQCode[],
     cfg: Config,
-    channelId: string
+    channelId: string,
+    progressOptions?: Parameters<typeof processMediaElement>[4]
 ): Promise<CQCode[]> {
     return Promise.all(
         msg.map(
-            async (element) => (await processMediaElement(ctx, element, cfg, channelId)) as CQCode
+            async (element) =>
+                (await processMediaElement(ctx, element, cfg, channelId, progressOptions)) as CQCode
         )
     );
 }

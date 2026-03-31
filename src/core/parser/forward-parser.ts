@@ -9,11 +9,12 @@ export async function reconstructForwardMsg(
     ctx: Context,
     session: Session,
     message: Message[],
-    cfg: Config
+    cfg: Config,
+    processMedia: boolean = true
 ): Promise<CQCode[]> {
     return Promise.all(
         message.map(async (msg: Message) => {
-            const content = await processForwardMessageContent(ctx, session, msg, cfg);
+            const content = await processForwardMessageContent(ctx, session, msg, cfg, processMedia);
 
             const senderNickname = msg.sender.nickname;
 
@@ -39,7 +40,8 @@ async function processForwardMessageContent(
     ctx: Context,
     session: Session,
     msg: Message,
-    cfg: Config
+    cfg: Config,
+    processMedia: boolean
 ): Promise<string | CQCode[]> {
     // deal with text message
     if (typeof msg.message === 'string') {
@@ -49,12 +51,16 @@ async function processForwardMessageContent(
     // deal with forward message
     const firstElement = msg.message[0];
     if (firstElement?.type === 'forward') {
-        return reconstructForwardMsg(ctx, session, firstElement.data.content, cfg);
+        return reconstructForwardMsg(ctx, session, firstElement.data.content, cfg, processMedia);
     }
 
     // deal with normal message
     return Promise.all(
         msg.message.map(async (element) => {
+            if (!processMedia) {
+                return element as CQCode;
+            }
+
             return (await processMediaElement(ctx, element, cfg, session.channelId)) as CQCode;
         })
     );

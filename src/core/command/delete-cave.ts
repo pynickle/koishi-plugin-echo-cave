@@ -1,6 +1,15 @@
 import { Config } from '../../config/config';
+import { EchoCave } from '../../index';
 import { deleteMediaFilesFromMessage } from '../../utils/media/media-helper';
 import { Context, Session } from 'koishi';
+
+export async function deleteStoredCave(ctx: Context, cfg: Config, caveMsg: EchoCave) {
+    if (cfg.deleteMediaWhenDeletingMsg) {
+        await deleteMediaFilesFromMessage(ctx, caveMsg.content, cfg);
+    }
+
+    await ctx.database.remove('echo_cave_v2', caveMsg.id);
+}
 
 export async function deleteCave(ctx: Context, session: Session, cfg: Config, id: number) {
     if (!session.guildId) {
@@ -50,11 +59,7 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
         }
     }
 
-    if (cfg.deleteMediaWhenDeletingMsg) {
-        await deleteMediaFilesFromMessage(ctx, caveMsg.content, cfg);
-    }
-
-    await ctx.database.remove('echo_cave_v2', id);
+    await deleteStoredCave(ctx, cfg, caveMsg);
     return session.text('.msgDeleted', [id]);
 }
 
@@ -104,11 +109,7 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
             continue;
         }
 
-        if (cfg.deleteMediaWhenDeletingMsg) {
-            await deleteMediaFilesFromMessage(ctx, caveMsg.content, cfg);
-        }
-
-        await ctx.database.remove('echo_cave_v2', cave.id);
+        await deleteStoredCave(ctx, cfg, caveMsg);
     }
 
     const foundIds = new Set(caves.map((r) => r.id));

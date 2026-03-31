@@ -6,6 +6,13 @@ import { createTextMsg } from '../../utils/msg/cqcode-helper';
 import { CQCode } from '@pynickle/koishi-plugin-adapter-onebot';
 import { Context, Session } from 'koishi';
 
+export class PartialCaveSendError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'PartialCaveSendError';
+    }
+}
+
 export async function sendCaveMsg(
     ctx: Context,
     session: Session,
@@ -73,29 +80,39 @@ export async function sendCaveMsg(
 
         await session.onebot.sendGroupMsg(channelId, [createTextMsg(chosenTemplate)]);
 
-        // If not an actual forward message, convert it to forward message format
-        if (!isActualForward) {
-            // Special handling for record type messages
-            if (content[0].type === 'record') {
-                await session.onebot.sendGroupMsg(channelId, content);
-                return;
+        try {
+            // If not an actual forward message, convert it to forward message format
+            if (!isActualForward) {
+                // Special handling for record type messages
+                if (content[0].type === 'record') {
+                    await session.onebot.sendGroupMsg(channelId, content);
+                    return;
+                }
+
+                // Create a forward message node with the current message
+                const forwardContent = [
+                    {
+                        type: 'node',
+                        data: {
+                            user_id: caveMsg.originUserId,
+                            nickname: originName,
+                            content: content,
+                        },
+                    },
+                ];
+                await session.onebot.sendGroupForwardMsg(channelId, forwardContent);
+            } else {
+                // Send as is for actual forward messages
+                await session.onebot.sendGroupForwardMsg(channelId, content);
+            }
+        } catch (error) {
+            try {
+                await session.send(session.text('commands.cave.messages.sendPartialFailure'));
+            } catch {
             }
 
-            // Create a forward message node with the current message
-            const forwardContent = [
-                {
-                    type: 'node',
-                    data: {
-                        user_id: caveMsg.originUserId,
-                        nickname: originName,
-                        content: content,
-                    },
-                },
-            ];
-            await session.onebot.sendGroupForwardMsg(channelId, forwardContent);
-        } else {
-            // Send as is for actual forward messages
-            await session.onebot.sendGroupForwardMsg(channelId, content);
+            const message = error instanceof Error ? error.message : '回声洞正文发送失败';
+            throw new PartialCaveSendError(message);
         }
 
         return;

@@ -1,6 +1,8 @@
 import zhCN from './locales/zh-CN.json';
 import { Schema } from 'koishi';
 
+export type SendFailureHandlingMode = 'auto-delete' | 'daily-report' | 'ignore';
+
 export interface Config {
     adminMessageProtection?: boolean;
     adminIds?: string[];
@@ -27,6 +29,9 @@ export interface Config {
     s3ForcePathStyle?: boolean;
     s3PathPrefix?: string;
     s3PresignExpiresIn?: number;
+    sendFailureHandlingMode?: SendFailureHandlingMode;
+    sendFailureSummaryAdminId?: string;
+    sendFailureSummaryTime?: string;
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -55,6 +60,9 @@ export const Config: Schema<Config> = Schema.object({
     s3ForcePathStyle: Schema.boolean().default(false),
     s3PathPrefix: Schema.string().default(''),
     s3PresignExpiresIn: Schema.number().default(3600).min(60).max(604800),
+    sendFailureHandlingMode: Schema.union(['auto-delete', 'daily-report', 'ignore']).default('ignore'),
+    sendFailureSummaryAdminId: Schema.string().default(''),
+    sendFailureSummaryTime: Schema.string().default('09:00'),
 }).i18n({
     'zh-CN': zhCN,
 });

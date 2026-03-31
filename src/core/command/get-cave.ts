@@ -1,6 +1,7 @@
 import { Config } from '../../config/config';
+import { handleCaveSendFailure } from '../send-failure';
 import { EchoCave } from '../../index';
-import { sendCaveMsg } from '../formatter/msg-formatter';
+import { PartialCaveSendError, sendCaveMsg } from '../formatter/msg-formatter';
 import { Context, Session } from 'koishi';
 
 export async function getCaveListByUser(ctx: Context, session: Session) {
@@ -89,18 +90,6 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
         }
 
         caveMsg = caves[selectedIndex];
-
-        // Update drawCount for the selected cave
-        await ctx.database.set(
-            'echo_cave_v2',
-            {
-                id: caveMsg.id,
-                channelId,
-            },
-            {
-                drawCount: caveMsg.drawCount + 1,
-            }
-        );
     } else {
         const caves = await ctx.database.get('echo_cave_v2', {
             id,
@@ -112,19 +101,37 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
         }
 
         caveMsg = caves[0];
-
-        // Update drawCount for the specified cave
-        await ctx.database.set(
-            'echo_cave_v2',
-            {
-                id,
-                channelId,
-            },
-            {
-                drawCount: caveMsg.drawCount + 1,
-            }
-        );
     }
 
-    await sendCaveMsg(ctx, session, caveMsg, cfg);
+    try {
+        await sendCaveMsg(ctx, session, caveMsg, cfg);
+    } catch (error) {
+        if (error instanceof PartialCaveSendError) {
+            await ctx.database.set(
+                'echo_cave_v2',
+                {
+                    id: caveMsg.id,
+                    channelId,
+                },
+                {
+                    drawCount: caveMsg.drawCount + 1,
+                }
+            );
+
+            return;
+        }
+
+        return await handleCaveSendFailure(ctx, session, caveMsg, cfg, error);
+    }
+
+    await ctx.database.set(
+        'echo_cave_v2',
+        {
+            id: caveMsg.id,
+            channelId,
+        },
+        {
+            drawCount: caveMsg.drawCount + 1,
+        }
+    );
 }
