@@ -1,3 +1,19 @@
+## [1.28.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.22...v1.28.0) (2026-03-31)
+
+### ✨ Features
+
+* add s3 and v2 storage ([38ec301](https://github.com/pynickle/koishi-plugin-echo-cave/commit/38ec3010083dd333ca6fb1bb18a891c29319db3d))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency axios to ^1.14.0 ([0bc27c6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0bc27c69be95b7ec8ad9306a373214346b6031f5))
+* **deps:** update dependency conventional-changelog-conventionalcommits to ^9.3.1 ([078cbeb](https://github.com/pynickle/koishi-plugin-echo-cave/commit/078cbebb253641ffa1e829777846dd1bbcfdbe8f))
+* **deps:** update dependency oxfmt to ^0.42.0 ([b2a3168](https://github.com/pynickle/koishi-plugin-echo-cave/commit/b2a3168f38b7a392658d76fec7a227c299c81abe))
+* **deps:** update dependency oxlint to ^1.57.0 ([f657b12](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f657b1217cdb2aeca85f0c69ac5abc37e0c28a68))
+* **deps:** update dependency pnpm to v10.33.0 ([65314b3](https://github.com/pynickle/koishi-plugin-echo-cave/commit/65314b38df09d8b3768ce57eaba500def9060156))
+* **deps:** update dependency typescript to v6 ([34e6432](https://github.com/pynickle/koishi-plugin-echo-cave/commit/34e6432d78dcc6f3788b33cdba81cb60d5d641fe))
+* update deps ([2fbd95d](https://github.com/pynickle/koishi-plugin-echo-cave/commit/2fbd95d41e52d904261cc384e39be81bab705f4e))
+
 ## [1.27.22](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.21...v1.27.22) (2026-03-17)
 
 ### 🔧 Miscellaneous Changes
