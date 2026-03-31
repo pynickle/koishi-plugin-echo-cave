@@ -51,6 +51,11 @@ interface MutationState {
     transferPlans: Map<string, MediaTransferPlan>;
 }
 
+interface RewriteHooks {
+    onS3Upload?: (type: MediaType, nextRef: string) => Promise<void>;
+    onMigrationCommitted?: () => Promise<void>;
+}
+
 interface S3Location {
     bucket: string;
     key: string;
@@ -60,6 +65,11 @@ interface LoadedMedia {
     buffer: Buffer;
     contentType?: string;
     sourceKey: string;
+}
+
+interface CaveMediaRefs {
+    id: number;
+    refs: string[];
 }
 
 class LRUCache<K, V> {
@@ -277,6 +287,14 @@ function isFileUri(value: string | undefined): value is string {
     return Boolean(value && value.startsWith('file:///'));
 }
 
+function isLocalFilePath(value: string | undefined): value is string {
+    if (!value) {
+        return false;
+    }
+
+    return path.isAbsolute(value) || /^[A-Za-z]:[\\/]/.test(value);
+}
+
 function isHttpUrl(value: string | undefined): value is string {
     return Boolean(value && /^https?:\/\//i.test(value));
 }
@@ -330,9 +348,32 @@ function isMediaType(value: string): value is MediaType {
     return value === 'image' || value === 'video' || value === 'file' || value === 'record';
 }
 
-function getElementFileRef(element: MaybeMediaElement): string | undefined {
+function getElementFileRef(ctx: Context, element: MaybeMediaElement, type: MediaType): string | undefined {
     const fileValue = element.data?.file;
-    return typeof fileValue === 'string' ? fileValue : undefined;
+    const urlValue = element.data?.url;
+
+    if (typeof fileValue === 'string') {
+        if (
+            isFileUri(fileValue) ||
+            isS3Uri(fileValue) ||
+            isHttpUrl(fileValue) ||
+            isLocalFilePath(fileValue)
+        ) {
+            return fileValue;
+        }
+    }
+
+    if (typeof urlValue === 'string') {
+        if (isFileUri(urlValue) || isS3Uri(urlValue) || isHttpUrl(urlValue) || isLocalFilePath(urlValue)) {
+            return urlValue;
+        }
+    }
+
+    if (typeof fileValue === 'string' && fileValue.trim()) {
+        return path.join(getLegacyMediaDir(ctx, type), fileValue);
+    }
+
+    return undefined;
 }
 
 function setElementFileRef(element: MaybeMediaElement, fileRef: string): MaybeMediaElement {
@@ -521,6 +562,15 @@ async function loadMediaBuffer(ctx: Context, fileRef: string, cfg: Config): Prom
         };
     }
 
+    if (isLocalFilePath(fileRef)) {
+        const buffer = await fs.readFile(fileRef);
+        return {
+            buffer,
+            contentType: getMimeTypeByExtension(path.extname(fileRef), 'file'),
+            sourceKey: fileRef,
+        };
+    }
+
     if (isS3Uri(fileRef)) {
         const location = parseS3Uri(fileRef);
         if (!location) {
@@ -671,11 +721,11 @@ function createDeleteLocalFilePlan(filePath: string): Pick<MediaTransferPlan, 'c
 }
 
 function isLegacyLocalMediaRef(ctx: Context, fileRef: string, type: MediaType): boolean {
-    if (!isFileUri(fileRef)) {
+    if (!isFileUri(fileRef) && !isLocalFilePath(fileRef)) {
         return false;
     }
 
-    const filePath = fromFileUri(fileRef);
+    const filePath = isFileUri(fileRef) ? fromFileUri(fileRef) : fileRef;
     return isPathInsideDir(filePath, getLegacyMediaDir(ctx, type));
 }
 
@@ -688,7 +738,8 @@ async function transferMediaRefToChannel(
     transferMode: MediaTransferMode,
     cfg: Config,
     state: MutationState,
-    stats: MediaMutationStats
+    stats: MediaMutationStats,
+    hooks?: RewriteHooks
 ): Promise<MediaTransferPlan> {
     const cacheKey = createTransferCacheKey(fileRef, targetChannelId, targetMode, transferMode);
     const cachedPlan = state.transferPlans.get(cacheKey);
@@ -844,6 +895,7 @@ async function transferMediaRefToChannel(
 
     state.transferPlans.set(cacheKey, plan);
     stats.mediaUploaded += 1;
+    await hooks?.onS3Upload?.(type, nextRef);
     return plan;
 }
 
@@ -895,6 +947,55 @@ async function mutateMessageContent(
     };
 }
 
+async function collectMessageMediaRefs(ctx: Context, content: string): Promise<string[]> {
+    const parsed = JSON.parse(content);
+    const elements = Array.isArray(parsed) ? parsed : [parsed];
+    const refs: string[] = [];
+
+    const visitElement = async (element: MaybeMediaElement): Promise<void> => {
+        if (isMediaType(element.type)) {
+            const fileRef = getElementFileRef(ctx, element, element.type);
+            if (fileRef) {
+                refs.push(fileRef);
+            }
+        }
+
+        const contentValue = element.data?.content;
+        if (element.type === 'node' && Array.isArray(contentValue)) {
+            for (const child of contentValue) {
+                await visitElement(child as MaybeMediaElement);
+            }
+        }
+    };
+
+    for (const element of elements) {
+        await visitElement(element as MaybeMediaElement);
+    }
+
+    return refs;
+}
+
+export async function inspectCaveMediaRefs(ctx: Context): Promise<CaveMediaRefs[]> {
+    const caves = await ctx.database.get('echo_cave_v2', {});
+    const results: CaveMediaRefs[] = [];
+
+    for (const cave of caves) {
+        try {
+            const refs = await collectMessageMediaRefs(ctx, cave.content);
+            if (refs.length > 0) {
+                results.push({
+                    id: cave.id,
+                    refs,
+                });
+            }
+        } catch (error) {
+            ctx.logger.warn(`Failed to inspect media refs for cave #${cave.id}: ${error}`);
+        }
+    }
+
+    return results;
+}
+
 async function rewriteMessageMediaStorage(
     ctx: Context,
     content: string,
@@ -904,11 +1005,12 @@ async function rewriteMessageMediaStorage(
     cfg: Config,
     state: MutationState,
     stats: MediaMutationStats,
-    shouldRewrite?: (fileRef: string, type: MediaType) => boolean
+    shouldRewrite?: (fileRef: string, type: MediaType) => boolean,
+    hooks?: RewriteHooks
 ): Promise<RewriteResult> {
     const planSet = new Set<MediaTransferPlan>();
     const rewritten = await mutateMessageContent(ctx, content, async (element, type) => {
-        const currentRef = getElementFileRef(element);
+        const currentRef = getElementFileRef(ctx, element, type);
         if (!currentRef) {
             stats.mediaSkipped += 1;
             return element;
@@ -929,7 +1031,8 @@ async function rewriteMessageMediaStorage(
                 transferMode,
                 cfg,
                 state,
-                stats
+                stats,
+                hooks
             );
             planSet.add(plan);
 
@@ -1142,7 +1245,7 @@ export async function resolveMediaElementForSend(
     cfg: Config
 ): Promise<MaybeMediaElement> {
     if (isMediaType(element.type)) {
-        const fileRef = getElementFileRef(element);
+        const fileRef = getElementFileRef(ctx, element, element.type);
         if (!fileRef) {
             return element;
         }
@@ -1165,6 +1268,10 @@ export async function resolveMediaElementForSend(
         }
 
         if (!cfg.useBase64ForMedia) {
+            if (isLocalFilePath(fileRef)) {
+                return setElementFileRef(element, toFileUri(fileRef));
+            }
+
             return element;
         }
 
@@ -1271,7 +1378,7 @@ export async function checkAndCleanMediaFiles(ctx: Context, cfg: Config, type: M
 
 export async function deleteMediaFilesFromMessage(ctx: Context, content: string, cfg: Config) {
     await mutateMessageContent(ctx, content, async (element, type) => {
-        const fileRef = getElementFileRef(element);
+        const fileRef = getElementFileRef(ctx, element, type);
         if (!fileRef) {
             return element;
         }
@@ -1282,6 +1389,10 @@ export async function deleteMediaFilesFromMessage(ctx: Context, content: string,
                 await fs.unlink(filePath);
                 base64Cache.delete(fileRef);
                 base64Cache.delete(filePath);
+            } else if (isLocalFilePath(fileRef)) {
+                await fs.unlink(fileRef);
+                base64Cache.delete(fileRef);
+                base64Cache.delete(toFileUri(fileRef));
             } else if (isS3Uri(fileRef)) {
                 const location = parseS3Uri(fileRef);
                 if (location) {
@@ -1339,7 +1450,12 @@ export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
     };
 }
 
-export async function migrateLocalMediaToS3(ctx: Context, cfg: Config, keepLocal: boolean) {
+export async function migrateLocalMediaToS3(
+    ctx: Context,
+    cfg: Config,
+    keepLocal: boolean,
+    createHooks?: (caveId: number) => RewriteHooks
+) {
     const caves = await ctx.database.get('echo_cave_v2', {});
     const stats = createEmptyStats();
     const state: MutationState = {
@@ -1349,6 +1465,7 @@ export async function migrateLocalMediaToS3(ctx: Context, cfg: Config, keepLocal
 
     for (const cave of caves) {
         let rewritten: RewriteResult | null = null;
+        const hooks = createHooks?.(cave.id);
         try {
             rewritten = await rewriteMessageMediaStorage(
                 ctx,
@@ -1359,12 +1476,14 @@ export async function migrateLocalMediaToS3(ctx: Context, cfg: Config, keepLocal
                 cfg,
                 state,
                 stats,
-                (fileRef) => isFileUri(fileRef)
+                (fileRef, type) => isFileUri(fileRef) || isLegacyLocalMediaRef(ctx, fileRef, type),
+                hooks
             );
 
             if (rewritten.content !== cave.content) {
                 await ctx.database.set('echo_cave_v2', cave.id, { content: rewritten.content });
                 await runTransferPlans(rewritten.plans, 'commit');
+                await hooks?.onMigrationCommitted?.();
             }
         } catch (error) {
             if (rewritten) {

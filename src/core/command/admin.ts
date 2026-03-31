@@ -1,5 +1,7 @@
 import { Config } from '../../config/config';
 import {
+    MediaType,
+    inspectCaveMediaRefs,
     mergeChannelCaves,
     migrateLocalMediaToS3,
     migrateLocalMediaToV2,
@@ -49,6 +51,19 @@ function parseBooleanOption(value: string | undefined, defaultValue: boolean): b
 
 function toChineseBooleanLabel(value: boolean): string {
     return value ? '保留' : '不保留';
+}
+
+function toChineseMediaTypeLabel(type: MediaType): string {
+    switch (type) {
+        case 'image':
+            return '图片';
+        case 'video':
+            return '视频';
+        case 'record':
+            return '语音';
+        default:
+            return '文件';
+    }
 }
 
 function appendFailedRecordSummary(message: string, failedRecordIds?: number[]): string {
@@ -207,9 +222,42 @@ export async function migrateMediaToS3(
         return;
     }
 
-    const result = await migrateLocalMediaToS3(ctx, cfg, keepLocal);
+    const result = await migrateLocalMediaToS3(ctx, cfg, keepLocal, (caveId) => {
+        const uploadedMediaTypes: MediaType[] = [];
+        return {
+            onS3Upload: async (type) => {
+                uploadedMediaTypes.push(type);
+            },
+            onMigrationCommitted: async () => {
+                for (const mediaType of uploadedMediaTypes) {
+                    await session.send(
+                        session.text('commands.cave.admin.migrate-s3.messages.itemUploaded', {
+                            caveId,
+                            mediaType: toChineseMediaTypeLabel(mediaType),
+                        })
+                    );
+                }
+            },
+        };
+    });
     return appendFailedRecordSummary(
         session.text('commands.cave.admin.migrate-s3.messages.migrateDone', result),
         result.failedRecordIds
     );
+}
+
+export async function inspectMediaRefsForMigration(ctx: Context, session: Session, cfg: Config) {
+    const accessError = ensureAdminPrivateAccess(session, cfg);
+    if (accessError) {
+        return accessError;
+    }
+
+    const results = await inspectCaveMediaRefs(ctx);
+    if (results.length === 0) {
+        return session.text('commands.cave.admin.inspect-media.messages.noMediaFound');
+    }
+
+    for (const { id, refs } of results) {
+        await session.send(`回声洞 #${id}\n${refs.join('\n')}`);
+    }
 }

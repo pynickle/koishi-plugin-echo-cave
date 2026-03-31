@@ -146,7 +146,14 @@
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次操作。",
         "confirmTimeout": "⌛ 二次确认超时，操作未执行。",
+        "itemUploaded": "📦 已上传到 S3：回声洞 #{caveId} 的{mediaType}",
         "migrateDone": "✅ S3 迁移完成：扫描 {scannedRecords} 条记录，更新 {recordsUpdated} 条记录，上传 {mediaUploaded} 个、复制 {mediaCopied} 个、移动 {mediaMoved} 个、删除 {mediaDeleted} 个、失败 {mediaFailed} 个。"
+      }
+    },
+    "cave.admin.inspect-media": {
+      "description": "检测回声洞中的媒体链接，不执行实际迁移",
+      "messages": {
+        "noMediaFound": "🔍 未检测到任何媒体链接。"
       }
     }
   }

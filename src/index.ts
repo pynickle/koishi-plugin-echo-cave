@@ -1,6 +1,7 @@
 import { Config } from './config/config';
 import { addCave } from './core/command/add-cave';
 import {
+    inspectMediaRefsForMigration,
     mergeCavesBetweenChannels,
     migrateLegacyLocalMedia,
     migrateMediaToS3,
@@ -148,5 +149,9 @@ export function apply(ctx: Context, cfg: Config) {
 
     ctx.command('cave.admin.migrate-s3 [keepLocal:string]').action(
         async ({ session }, keepLocal) => await migrateMediaToS3(ctx, session, cfg, keepLocal)
+    );
+
+    ctx.command('cave.admin.inspect-media').action(
+        async ({ session }) => await inspectMediaRefsForMigration(ctx, session, cfg)
     );
 }
