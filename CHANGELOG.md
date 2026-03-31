@@ -1,3 +1,9 @@
+## [1.28.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.28.0...v1.28.1) (2026-03-31)
+
+### 🚀 Improvements
+
+* add test command ([8853151](https://github.com/pynickle/koishi-plugin-echo-cave/commit/8853151eb0181fa9bbbed250cf22315dba2a16cb))
+
 ## [1.28.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.27.22...v1.28.0) (2026-03-31)
 
 ### ✨ Features
