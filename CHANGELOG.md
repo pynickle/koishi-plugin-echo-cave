@@ -1,3 +1,9 @@
+## [1.28.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.28.1...v1.28.2) (2026-03-31)
+
+### 🚀 Improvements
+
+* add range for test media ([d2d0ff0](https://github.com/pynickle/koishi-plugin-echo-cave/commit/d2d0ff0d09c6c256946c52630f62e427a54f9d11))
+
 ## [1.28.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.28.0...v1.28.1) (2026-03-31)
 
 ### 🚀 Improvements
