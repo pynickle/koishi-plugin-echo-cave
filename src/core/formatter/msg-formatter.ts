@@ -16,7 +16,9 @@ export async function sendCaveMsg(
     let content: CQCode[] = JSON.parse(caveMsg.content);
 
     content = await Promise.all(
-        content.map(async (element) => (await resolveMediaElementForSend(ctx, element, cfg)) as CQCode)
+        content.map(
+            async (element) => (await resolveMediaElementForSend(ctx, element, cfg)) as CQCode
+        )
     );
 
     // Format necessary information

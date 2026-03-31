@@ -9,6 +9,11 @@ import {
 import { listenForUserMessage } from '../../utils/msg/message-listener';
 import { Context, Session } from 'koishi';
 
+interface IdRange {
+    start: number;
+    end: number;
+}
+
 function ensureAdminPrivateAccess(session: Session, cfg: Config): string | null {
     if (session.guildId) {
         return session.text('echo-cave.general.adminPrivateOnly');
@@ -72,6 +77,53 @@ function appendFailedRecordSummary(message: string, failedRecordIds?: number[]):
     }
 
     return `${message}\n⚠️ 失败记录 ID：${failedRecordIds.join(', ')}`;
+}
+
+function parseIdRanges(value: string | undefined): IdRange[] | null {
+    if (!value?.trim()) {
+        return [];
+    }
+
+    const segments = value
+        .split(',')
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+
+    if (segments.length === 0) {
+        return [];
+    }
+
+    const ranges: IdRange[] = [];
+    for (const segment of segments) {
+        if (/^\d+$/.test(segment)) {
+            const id = Number(segment);
+            ranges.push({ start: id, end: id });
+            continue;
+        }
+
+        const rangeMatch = segment.match(/^(\d+)-(\d+)$/);
+        if (!rangeMatch) {
+            return null;
+        }
+
+        const start = Number(rangeMatch[1]);
+        const end = Number(rangeMatch[2]);
+        if (start > end) {
+            return null;
+        }
+
+        ranges.push({ start, end });
+    }
+
+    return ranges;
+}
+
+function isIdInRanges(id: number, ranges: IdRange[]): boolean {
+    if (ranges.length === 0) {
+        return true;
+    }
+
+    return ranges.some((range) => id >= range.start && id <= range.end);
 }
 
 async function requestSecondConfirmation(
@@ -167,11 +219,7 @@ export async function mergeCavesBetweenChannels(
     );
 }
 
-export async function migrateLegacyLocalMedia(
-    ctx: Context,
-    session: Session,
-    cfg: Config
-) {
+export async function migrateLegacyLocalMedia(ctx: Context, session: Session, cfg: Config) {
     const accessError = ensureAdminPrivateAccess(session, cfg);
     if (accessError) {
         return accessError;
@@ -246,15 +294,44 @@ export async function migrateMediaToS3(
     );
 }
 
-export async function inspectMediaRefsForMigration(ctx: Context, session: Session, cfg: Config) {
+export async function inspectMediaRefsForMigration(
+    ctx: Context,
+    session: Session,
+    cfg: Config,
+    idRangesOption?: string
+) {
     const accessError = ensureAdminPrivateAccess(session, cfg);
     if (accessError) {
         return accessError;
     }
 
-    const results = await inspectCaveMediaRefs(ctx);
+    const idRanges = parseIdRanges(idRangesOption);
+    if (idRanges === null) {
+        return session.text('commands.cave.admin.inspect-media.messages.invalidRange');
+    }
+
+    const displayRanges = idRangesOption?.trim() || '全部';
+    const results = await inspectCaveMediaRefs(ctx, (id) => isIdInRanges(id, idRanges));
     if (results.length === 0) {
-        return session.text('commands.cave.admin.inspect-media.messages.noMediaFound');
+        return session.text('commands.cave.admin.inspect-media.messages.noMediaFound', {
+            idRanges: displayRanges,
+        });
+    }
+
+    const confirmed = await requestSecondConfirmation(
+        ctx,
+        session,
+        session.text('commands.cave.admin.inspect-media.messages.confirmSummary', {
+            idRanges: displayRanges,
+            matchedCount: results.length,
+        }),
+        session.text('commands.cave.admin.inspect-media.messages.confirmRetry'),
+        session.text('commands.cave.admin.inspect-media.messages.confirmTimeout'),
+        session.text('commands.cave.admin.inspect-media.messages.confirmCancelled')
+    );
+
+    if (!confirmed) {
+        return;
     }
 
     for (const { id, refs } of results) {

@@ -10,6 +10,8 @@ export async function processMessageContent(
     channelId: string
 ): Promise<CQCode[]> {
     return Promise.all(
-        msg.map(async (element) => (await processMediaElement(ctx, element, cfg, channelId)) as CQCode)
+        msg.map(
+            async (element) => (await processMediaElement(ctx, element, cfg, channelId)) as CQCode
+        )
     );
 }

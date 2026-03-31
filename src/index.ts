@@ -131,7 +131,9 @@ export function apply(ctx: Context, cfg: Config) {
         async ({ session }, period) => await getRanking(ctx, session, cfg, period)
     );
 
-    ctx.command('cave.admin.merge <sourceChannelId:string> <targetChannelId:string> [keepSource:string]').action(
+    ctx.command(
+        'cave.admin.merge <sourceChannelId:string> <targetChannelId:string> [keepSource:string]'
+    ).action(
         async ({ session }, sourceChannelId, targetChannelId, keepSource) =>
             await mergeCavesBetweenChannels(
                 ctx,
@@ -151,7 +153,8 @@ export function apply(ctx: Context, cfg: Config) {
         async ({ session }, keepLocal) => await migrateMediaToS3(ctx, session, cfg, keepLocal)
     );
 
-    ctx.command('cave.admin.inspect-media').action(
-        async ({ session }) => await inspectMediaRefsForMigration(ctx, session, cfg)
+    ctx.command('cave.admin.inspect-media [idRanges:text]').action(
+        async ({ session }, idRanges) =>
+            await inspectMediaRefsForMigration(ctx, session, cfg, idRanges)
     );
 }

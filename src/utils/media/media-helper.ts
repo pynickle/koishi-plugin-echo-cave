@@ -268,7 +268,11 @@ function getLocalMediaV2Root(ctx: Context): string {
 }
 
 function getLocalMediaV2Dir(ctx: Context, channelId: string, type: MediaType): string {
-    return path.join(getLocalMediaV2Root(ctx), encodeURIComponent(channelId), getMediaDirName(type));
+    return path.join(
+        getLocalMediaV2Root(ctx),
+        encodeURIComponent(channelId),
+        getMediaDirName(type)
+    );
 }
 
 function getLegacyMediaDir(ctx: Context, type: MediaType): string {
@@ -341,14 +345,21 @@ function normalizePathForComparison(filePath: string): string {
 function isPathInsideDir(filePath: string, dirPath: string): boolean {
     const normalizedFilePath = normalizePathForComparison(filePath);
     const normalizedDirPath = normalizePathForComparison(dirPath);
-    return normalizedFilePath.startsWith(`${normalizedDirPath}/`) || normalizedFilePath === normalizedDirPath;
+    return (
+        normalizedFilePath.startsWith(`${normalizedDirPath}/`) ||
+        normalizedFilePath === normalizedDirPath
+    );
 }
 
 function isMediaType(value: string): value is MediaType {
     return value === 'image' || value === 'video' || value === 'file' || value === 'record';
 }
 
-function getElementFileRef(ctx: Context, element: MaybeMediaElement, type: MediaType): string | undefined {
+function getElementFileRef(
+    ctx: Context,
+    element: MaybeMediaElement,
+    type: MediaType
+): string | undefined {
     const fileValue = element.data?.file;
     const urlValue = element.data?.url;
 
@@ -364,7 +375,12 @@ function getElementFileRef(ctx: Context, element: MaybeMediaElement, type: Media
     }
 
     if (typeof urlValue === 'string') {
-        if (isFileUri(urlValue) || isS3Uri(urlValue) || isHttpUrl(urlValue) || isLocalFilePath(urlValue)) {
+        if (
+            isFileUri(urlValue) ||
+            isS3Uri(urlValue) ||
+            isHttpUrl(urlValue) ||
+            isLocalFilePath(urlValue)
+        ) {
             return urlValue;
         }
     }
@@ -392,8 +408,11 @@ function getContentTypeFromHeaders(
     type: MediaType
 ): string | undefined {
     const rawValue = headers['content-type'];
-    const contentType =
-        Array.isArray(rawValue) ? rawValue[0] : typeof rawValue === 'string' ? rawValue : undefined;
+    const contentType = Array.isArray(rawValue)
+        ? rawValue[0]
+        : typeof rawValue === 'string'
+          ? rawValue
+          : undefined;
 
     if (!contentType) {
         return undefined;
@@ -535,11 +554,7 @@ function encodeCopySource(location: S3Location): string {
     return `${location.bucket}/${location.key.split('/').map(encodeURIComponent).join('/')}`;
 }
 
-async function copyS3Object(
-    cfg: Config,
-    source: S3Location,
-    target: S3Location
-): Promise<void> {
+async function copyS3Object(cfg: Config, source: S3Location, target: S3Location): Promise<void> {
     const client = getS3Client(cfg);
 
     await client.send(
@@ -677,15 +692,20 @@ async function transferS3ObjectToChannel(
     }
 
     const extension = path.extname(source.key).slice(1) || getDefaultExtension(type);
-    const key = buildS3Key(cfg, targetChannelId, type, `${uuidv4().replace(/-/g, '')}.${extension}`);
+    const key = buildS3Key(
+        cfg,
+        targetChannelId,
+        type,
+        `${uuidv4().replace(/-/g, '')}.${extension}`
+    );
     const target = { bucket, key };
 
     if (source.bucket === target.bucket && source.key === target.key) {
         return toS3Uri(source);
     }
 
-        await copyS3Object(cfg, source, target);
-        return toS3Uri(target);
+    await copyS3Object(cfg, source, target);
+    return toS3Uri(target);
 }
 
 function createTransferCacheKey(
@@ -697,7 +717,9 @@ function createTransferCacheKey(
     return [fileRef, targetChannelId, targetMode, transferMode].join('|');
 }
 
-function createDeleteLocalFilePlan(filePath: string): Pick<MediaTransferPlan, 'commit' | 'rollback'> {
+function createDeleteLocalFilePlan(
+    filePath: string
+): Pick<MediaTransferPlan, 'commit' | 'rollback'> {
     return {
         commit: async () => {
             try {
@@ -783,9 +805,14 @@ async function transferMediaRefToChannel(
         }
 
         const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
-        const extension =
-            path.extname(loaded.sourceKey).slice(1) || getDefaultExtension(type);
-        const targetPath = await writeLocalMedia(ctx, targetChannelId, type, loaded.buffer, extension);
+        const extension = path.extname(loaded.sourceKey).slice(1) || getDefaultExtension(type);
+        const targetPath = await writeLocalMedia(
+            ctx,
+            targetChannelId,
+            type,
+            loaded.buffer,
+            extension
+        );
 
         const plan: MediaTransferPlan = {
             nextRef: toFileUri(targetPath),
@@ -819,7 +846,13 @@ async function transferMediaRefToChannel(
             throw new Error(`Invalid S3 uri: ${fileRef}`);
         }
 
-        const nextRef = await transferS3ObjectToChannel(cfg, source, type, targetChannelId, transferMode);
+        const nextRef = await transferS3ObjectToChannel(
+            cfg,
+            source,
+            type,
+            targetChannelId,
+            transferMode
+        );
         const targetLocation = parseS3Uri(nextRef);
         const plan: MediaTransferPlan = {
             nextRef,
@@ -924,7 +957,9 @@ async function mutateMessageContent(
                 contentValue.map(async (child) => mutateElement(child as MaybeMediaElement))
             );
 
-            const hasChildChange = nextContent.some((child, index) => child !== contentValue[index]);
+            const hasChildChange = nextContent.some(
+                (child, index) => child !== contentValue[index]
+            );
             if (hasChildChange) {
                 changed = true;
                 return {
@@ -975,11 +1010,18 @@ async function collectMessageMediaRefs(ctx: Context, content: string): Promise<s
     return refs;
 }
 
-export async function inspectCaveMediaRefs(ctx: Context): Promise<CaveMediaRefs[]> {
+export async function inspectCaveMediaRefs(
+    ctx: Context,
+    shouldInclude?: (caveId: number) => boolean
+): Promise<CaveMediaRefs[]> {
     const caves = await ctx.database.get('echo_cave_v2', {});
     const results: CaveMediaRefs[] = [];
 
     for (const cave of caves) {
+        if (shouldInclude && !shouldInclude(cave.id)) {
+            continue;
+        }
+
         try {
             const refs = await collectMessageMediaRefs(ctx, cave.content);
             if (refs.length > 0) {
@@ -1140,7 +1182,9 @@ export async function saveMedia(
 ) {
     const mediaUrl = typeof mediaElement.url === 'string' ? mediaElement.url : '';
     const originalMediaName =
-        typeof mediaElement.file === 'string' ? mediaElement.file : `media.${getDefaultExtension(type)}`;
+        typeof mediaElement.file === 'string'
+            ? mediaElement.file
+            : `media.${getDefaultExtension(type)}`;
     const extension = getFileExtension(originalMediaName, type);
 
     if (!mediaUrl) {
@@ -1285,7 +1329,8 @@ export async function resolveMediaElementForSend(
             try {
                 const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
                 const sourceExt = path.extname(loaded.sourceKey);
-                const mimeType = loaded.contentType || getMimeTypeByExtension(sourceExt, element.type);
+                const mimeType =
+                    loaded.contentType || getMimeTypeByExtension(sourceExt, element.type);
                 const dataUrl = `data:${mimeType};base64,${loaded.buffer.toString('base64')}`;
                 base64Cache.set(cacheKey, dataUrl);
                 return setElementFileRef(element, dataUrl);
@@ -1345,7 +1390,9 @@ export async function checkAndCleanMediaFiles(ctx: Context, cfg: Config, type: M
 
         const totalSize = fileInfos.reduce((sum, file) => sum + file.size, 0);
         if (totalSize <= maxSize) {
-            ctx.logger.debug(`${type} check completed in ${Date.now() - startTime}ms: no cleanup needed`);
+            ctx.logger.debug(
+                `${type} check completed in ${Date.now() - startTime}ms: no cleanup needed`
+            );
             return;
         }
 
