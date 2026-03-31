@@ -1,0 +1,89 @@
+# PROJECT KNOWLEDGE BASE
+
+**Generated:** 2026-03-31 Asia/Shanghai
+**Commit:** 4836201
+**Branch:** master
+
+## OVERVIEW
+Koishi plugin for storing, retrieving, ranking, and administrating group chat "echo cave" records. Core work happens in TypeScript under `src/`, with compiled output in `lib/` and release automation via semantic-release.
+
+## STRUCTURE
+```text
+./
+├── src/               # source of truth; edit here, not in lib/
+│   ├── index.ts       # plugin entry, table declarations, command registration
+│   ├── config/        # Koishi schema + config i18n
+│   ├── core/          # command flows, parsing, formatting, send-failure handling
+│   ├── adapters/      # OneBot-specific user helpers
+│   ├── utils/         # media and message helpers
+│   └── locales/       # plugin locale strings
+├── lib/               # build output
+├── .github/workflows/ # release-only CI
+└── logs/              # runtime artifacts, not source
+```
+
+## WHERE TO LOOK
+| Task | Location | Notes |
+|------|----------|-------|
+| Add or register a command | `src/index.ts`, `src/core/command/` | `index.ts` wires commands; handlers live below |
+| Change plugin config | `src/config/config.ts`, `src/config/locales/zh-CN.json` | schema + config labels stay aligned |
+| Debug media save/send/migration | `src/utils/media/media-helper.ts` | local/S3, cleanup, migration, URI rewriting |
+| Change user/group checks | `src/adapters/onebot/user.ts` | membership and display-name resolution |
+| Adjust forward/quoted message parsing | `src/core/parser/` | `forward-parser.ts` and `msg-parser.ts` split responsibilities |
+| Change cave retrieval/delete semantics | `src/core/command/get-cave.ts`, `delete-cave.ts` | runtime reads/writes target `echo_cave_v2`; delete may remove media |
+| Admin repair and migration flows | `src/core/command/admin.ts` | merge, local-v2 migration, S3 migration, media inspection |
+| Send failure policy | `src/core/send-failure.ts` | ignore vs auto-delete vs daily-report |
+| Locale text for commands | `src/locales/zh-CN.json` | command/runtime strings |
+
+## CODE MAP
+| Symbol / Module | Kind | Location | Refs | Role |
+|-----------------|------|----------|------|------|
+| `apply()` | entry | `src/index.ts` | root entry | declares tables and binds all commands |
+| `Config` / `Config` schema | config hub | `src/config/config.ts` | 11 imports | central plugin contract |
+| `media-helper.ts` | utility hub | `src/utils/media/media-helper.ts` | 6 imports | media processing, storage, migration |
+| `user.ts` | adapter hub | `src/adapters/onebot/user.ts` | 6 imports | OneBot-specific user lookup and validation |
+| `addCave()` | command flow | `src/core/command/add-cave.ts` | command entry | quote capture, media processing, user selection |
+| `getCave()` | command flow | `src/core/command/get-cave.ts` | command entry | weighted random retrieval + draw count |
+| `admin.ts` | command flow | `src/core/command/admin.ts` | command entry | repair/migration operations with confirmations |
+| `handleCaveSendFailure()` | reliability flow | `src/core/send-failure.ts` | 2 imports | send failure persistence and reporting |
+
+## CONVENTIONS
+- Source lives in `src/`; `lib/` is generated output.
+- Formatting is Oxfmt: 4-space indent, single quotes, trailing commas `es5`, JSON excluded.
+- Linting is Oxlint, with `correctness` disabled and several unicorn style rules intentionally off.
+- TypeScript is not strict (`strict: false`), so preserve existing runtime guards instead of assuming narrow types.
+- Package manager and CI both use pnpm, even though local scripts are npm-compatible.
+- Release flow expects conventional commit types from `.releaserc.json`, including custom `imp`.
+
+## ANTI-PATTERNS (THIS PROJECT)
+- Do not edit `lib/` directly.
+- Do not document or add test commands that do not exist; this repo currently has no test suite.
+- Do not assume private-chat support for normal cave flows; README and handlers enforce guild/group usage for most commands.
+- Do not bypass quote requirements in `cave.echo`; the handler depends on `session.quote`.
+- Do not duplicate root guidance into child AGENTS files; child files should contain only local deltas.
+- Do not auto-format JSON locale files with Oxfmt assumptions; JSON is intentionally ignored.
+
+## UNIQUE STYLES
+- Command handlers return localized `session.text(...)` keys instead of inline prose.
+- Admin maintenance flows favor explicit second confirmation through `listenForUserMessage()`.
+- Media operations preserve storage-mode abstraction: local path, `file://`, `s3://`, and presigned URL concerns stay centralized.
+- Business logic is function-first; there are no classes besides small internal helpers like the media LRU cache.
+
+## DATA MODEL NOTES
+- `echo_cave_v2` is the active runtime table for cave records.
+- `echo_cave` remains as the legacy source consumed by `ctx.model.migrate(...)`; avoid adding new runtime logic against the legacy table.
+
+## COMMANDS
+```bash
+pnpm install
+pnpm run lint
+pnpm run lint:fix
+pnpm run fmt
+pnpm run build
+pnpm run release
+```
+
+## NOTES
+- `src/utils/media/media-helper.ts` is the biggest hotspot in the repo; read existing helpers before adding new storage branches.
+- `src/core/command/` is the main business boundary; use its local AGENTS file for workflow-specific rules.
+- `logs/` exists at repo root but is not part of the plugin source model.

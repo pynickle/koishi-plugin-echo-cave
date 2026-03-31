@@ -4,57 +4,66 @@ import { EchoCave } from '../../index';
 import { PartialCaveSendError, sendCaveMsg } from '../formatter/msg-formatter';
 import { Context, Session } from 'koishi';
 
-export async function getCaveListByUser(ctx: Context, session: Session) {
-    if (!session.guildId) {
-        return session.text('echo-cave.general.privateChatReminder');
-    }
+function ensureGuildSession(session: Session): string | null {
+    return session.guildId ? null : 'echo-cave.general.privateChatReminder';
+}
 
-    const { userId, channelId } = session;
+function formatCaveIdList(caves: Pick<EchoCave, 'id'>[], separator: string = ' | '): string {
+    return caves.map((cave) => cave.id).join(separator);
+}
+
+async function getCaveIdsByField(
+    ctx: Context,
+    session: Session,
+    field: 'userId' | 'originUserId',
+    emptyText: string
+) {
+    const guildAccessError = ensureGuildSession(session);
+    if (guildAccessError) {
+        return session.text(guildAccessError);
+    }
 
     const caves = await ctx.database.get(
         'echo_cave_v2',
         {
-            userId,
-            channelId,
+            [field]: session.userId,
+            channelId: session.channelId,
         },
         ['id']
     );
 
     if (caves.length === 0) {
-        return session.text('.noMsgContributed');
+        return session.text(emptyText);
     }
 
-    const ids = caves.map((cave) => cave.id).join(' | ');
-    return session.text('.msgListHeader') + '\n' + ids;
+    return session.text('.msgListHeader') + '\n' + formatCaveIdList(caves);
+}
+
+async function incrementDrawCount(ctx: Context, caveMsg: EchoCave) {
+    await ctx.database.set(
+        'echo_cave_v2',
+        {
+            id: caveMsg.id,
+            channelId: caveMsg.channelId,
+        },
+        {
+            drawCount: caveMsg.drawCount + 1,
+        }
+    );
+}
+
+export async function getCaveListByUser(ctx: Context, session: Session) {
+    return await getCaveIdsByField(ctx, session, 'userId', '.noMsgContributed');
 }
 
 export async function getCaveListByOriginUser(ctx: Context, session: Session) {
-    if (!session.guildId) {
-        return session.text('echo-cave.general.privateChatReminder');
-    }
-
-    const { userId, channelId } = session;
-
-    const caves = await ctx.database.get(
-        'echo_cave_v2',
-        {
-            originUserId: userId,
-            channelId,
-        },
-        ['id']
-    );
-
-    if (caves.length === 0) {
-        return session.text('.noMsgTraced');
-    }
-
-    const ids = caves.map((cave) => cave.id).join(' | ');
-    return session.text('.msgListHeader') + '\n' + ids;
+    return await getCaveIdsByField(ctx, session, 'originUserId', '.noMsgTraced');
 }
 
 export async function getCave(ctx: Context, session: Session, cfg: Config, id: number) {
-    if (!session.guildId) {
-        return session.text('echo-cave.general.privateChatReminder');
+    const guildAccessError = ensureGuildSession(session);
+    if (guildAccessError) {
+        return session.text(guildAccessError);
     }
 
     let caveMsg: EchoCave;
@@ -71,7 +80,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
         }
 
         // Use weighted random selection based on drawCount
-        const alpha = cfg.alpha || 0.2;
+        const alpha = cfg.alpha ?? 0.2;
 
         // Calculate weights for each cave
         const weights = caves.map((cave) => 1 / (1 + cave.drawCount * alpha));
@@ -107,16 +116,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
         await sendCaveMsg(ctx, session, caveMsg, cfg);
     } catch (error) {
         if (error instanceof PartialCaveSendError) {
-            await ctx.database.set(
-                'echo_cave_v2',
-                {
-                    id: caveMsg.id,
-                    channelId,
-                },
-                {
-                    drawCount: caveMsg.drawCount + 1,
-                }
-            );
+            await incrementDrawCount(ctx, caveMsg);
 
             return;
         }
@@ -124,14 +124,5 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
         return await handleCaveSendFailure(ctx, session, caveMsg, cfg, error);
     }
 
-    await ctx.database.set(
-        'echo_cave_v2',
-        {
-            id: caveMsg.id,
-            channelId,
-        },
-        {
-            drawCount: caveMsg.drawCount + 1,
-        }
-    );
+    await incrementDrawCount(ctx, caveMsg);
 }

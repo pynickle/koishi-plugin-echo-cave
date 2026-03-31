@@ -3,6 +3,61 @@ import { EchoCave } from '../../index';
 import { deleteMediaFilesFromMessage } from '../../utils/media/media-helper';
 import { Context, Session } from 'koishi';
 
+type DeletePermissionFailure =
+    | 'echo-cave.general.privateChatReminder'
+    | '.adminOnly'
+    | '.contributorDeleteDenied'
+    | '.senderDeleteDenied'
+    | '.permissionDenied';
+
+interface DeleteActor {
+    currentUserId: string;
+    isCurrentUserAdmin: boolean;
+}
+
+function ensureGuildSession(session: Session): DeletePermissionFailure | null {
+    return session.guildId ? null : 'echo-cave.general.privateChatReminder';
+}
+
+async function getDeleteActor(ctx: Context, session: Session): Promise<DeleteActor> {
+    const user = await ctx.database.getUser(session.platform, session.userId);
+    return {
+        currentUserId: session.userId,
+        isCurrentUserAdmin: (user?.authority || 0) >= 4,
+    };
+}
+
+async function getDeletePermissionFailure(
+    ctx: Context,
+    session: Session,
+    cfg: Config,
+    caveMsg: EchoCave,
+    actor: DeleteActor
+): Promise<DeletePermissionFailure | null> {
+    if (cfg.adminMessageProtection) {
+        const caveUser = await ctx.database.getUser(session.platform, caveMsg.userId);
+        const isCaveUserAdmin = (caveUser?.authority || 0) >= 4;
+
+        if (isCaveUserAdmin && !actor.isCurrentUserAdmin) {
+            return '.adminOnly';
+        }
+    }
+
+    if (actor.isCurrentUserAdmin) {
+        return null;
+    }
+
+    if (actor.currentUserId === caveMsg.userId) {
+        return cfg.allowContributorDelete ? null : '.contributorDeleteDenied';
+    }
+
+    if (actor.currentUserId === caveMsg.originUserId) {
+        return cfg.allowSenderDelete ? null : '.senderDeleteDenied';
+    }
+
+    return '.permissionDenied';
+}
+
 export async function deleteStoredCave(ctx: Context, cfg: Config, caveMsg: EchoCave) {
     if (cfg.deleteMediaWhenDeletingMsg) {
         await deleteMediaFilesFromMessage(ctx, caveMsg.content, cfg);
@@ -12,8 +67,9 @@ export async function deleteStoredCave(ctx: Context, cfg: Config, caveMsg: EchoC
 }
 
 export async function deleteCave(ctx: Context, session: Session, cfg: Config, id: number) {
-    if (!session.guildId) {
-        return session.text('echo-cave.general.privateChatReminder');
+    const guildAccessError = ensureGuildSession(session);
+    if (guildAccessError) {
+        return session.text(guildAccessError);
     }
 
     if (!id) {
@@ -27,36 +83,10 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
     }
 
     const caveMsg = caves[0];
-    const currentUserId = session.userId;
-    const user = await ctx.database.getUser(session.platform, currentUserId);
-    const userAuthority = user.authority;
-    const isCurrentUserAdmin = userAuthority >= 4;
-
-    if (cfg.adminMessageProtection) {
-        const caveUser = await ctx.database.getUser(session.platform, caveMsg.userId);
-        const isCaveUserAdmin = caveUser.authority >= 4;
-
-        if (isCaveUserAdmin && !isCurrentUserAdmin) {
-            return session.text('.adminOnly');
-        }
-    }
-
-    // Check delete permissions
-    if (!isCurrentUserAdmin) {
-        if (currentUserId === caveMsg.userId) {
-            // Contributor check
-            if (!cfg.allowContributorDelete) {
-                return session.text('.contributorDeleteDenied');
-            }
-        } else if (currentUserId === caveMsg.originUserId) {
-            // Sender check
-            if (!cfg.allowSenderDelete) {
-                return session.text('.senderDeleteDenied');
-            }
-        } else {
-            // Neither contributor nor sender nor admin
-            return session.text('.permissionDenied');
-        }
+    const actor = await getDeleteActor(ctx, session);
+    const permissionFailure = await getDeletePermissionFailure(ctx, session, cfg, caveMsg, actor);
+    if (permissionFailure) {
+        return session.text(permissionFailure);
     }
 
     await deleteStoredCave(ctx, cfg, caveMsg);
@@ -64,52 +94,27 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
 }
 
 export async function deleteCaves(ctx: Context, session: Session, cfg: Config, ids: number[]) {
-    if (!session.guildId) {
-        return session.text('echo-cave.general.privateChatReminder');
+    const guildAccessError = ensureGuildSession(session);
+    if (guildAccessError) {
+        return session.text(guildAccessError);
     }
 
-    if (!ids) {
+    if (!ids || ids.length === 0) {
         return session.text('.noIdProvided');
     }
 
     const failedIds: number[] = [];
-    const currentUserId = session.userId;
-    const user = await ctx.database.getUser(session.platform, currentUserId);
-    const userAuthority = user.authority;
-    const isCurrentUserAdmin = userAuthority >= 4;
+    const actor = await getDeleteActor(ctx, session);
 
     const caves = await ctx.database.get('echo_cave_v2', ids);
     for (const cave of caves) {
-        const caveMsg = cave;
-
-        if (cfg.adminMessageProtection) {
-            const caveUser = await ctx.database.getUser(session.platform, caveMsg.userId);
-            const isCaveUserAdmin = caveUser.authority >= 4;
-
-            if (isCaveUserAdmin && !isCurrentUserAdmin) {
-                failedIds.push(cave.id);
-                continue;
-            }
-        }
-
-        // Check delete permissions
-        let hasPermission = isCurrentUserAdmin;
-        if (!hasPermission) {
-            if (currentUserId === caveMsg.userId) {
-                // Contributor check
-                hasPermission = cfg.allowContributorDelete;
-            } else if (currentUserId === caveMsg.originUserId) {
-                // Sender check
-                hasPermission = cfg.allowSenderDelete;
-            }
-        }
-
-        if (!hasPermission) {
+        const permissionFailure = await getDeletePermissionFailure(ctx, session, cfg, cave, actor);
+        if (permissionFailure) {
             failedIds.push(cave.id);
             continue;
         }
 
-        await deleteStoredCave(ctx, cfg, caveMsg);
+        await deleteStoredCave(ctx, cfg, cave);
     }
 
     const foundIds = new Set(caves.map((r) => r.id));
