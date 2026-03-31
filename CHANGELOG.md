@@ -1,3 +1,9 @@
+## [1.29.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.28.2...v1.29.0) (2026-03-31)
+
+### ✨ Features
+
+* add auto delete wrong cave ([1d7ea0a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/1d7ea0a1557e55985c8a07f713a05fd6885f6d8c))
+
 ## [1.28.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.28.1...v1.28.2) (2026-03-31)
 
 ### 🚀 Improvements
