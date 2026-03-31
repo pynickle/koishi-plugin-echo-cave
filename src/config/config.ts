@@ -3,6 +3,7 @@ import { Schema } from 'koishi';
 
 export interface Config {
     adminMessageProtection?: boolean;
+    adminIds?: string[];
     allowContributorDelete?: boolean;
     allowSenderDelete?: boolean;
     deleteMediaWhenDeletingMsg?: boolean;
@@ -17,10 +18,20 @@ export interface Config {
     forwardSelectTimeout?: number;
     enableForwardUserSelection?: boolean;
     alpha?: number;
+    mediaStorage?: 'local' | 's3';
+    s3Bucket?: string;
+    s3Region?: string;
+    s3Endpoint?: string;
+    s3AccessKeyId?: string;
+    s3SecretAccessKey?: string;
+    s3ForcePathStyle?: boolean;
+    s3PathPrefix?: string;
+    s3PresignExpiresIn?: number;
 }
 
 export const Config: Schema<Config> = Schema.object({
     adminMessageProtection: Schema.boolean().default(false),
+    adminIds: Schema.array(String).role('table').default([]),
     allowContributorDelete: Schema.boolean().default(true),
     allowSenderDelete: Schema.boolean().default(true),
     deleteMediaWhenDeletingMsg: Schema.boolean().default(true),
@@ -35,6 +46,15 @@ export const Config: Schema<Config> = Schema.object({
     forwardSelectTimeout: Schema.number().default(20),
     enableForwardUserSelection: Schema.boolean().default(true),
     alpha: Schema.number().default(0.2).min(0).max(2),
+    mediaStorage: Schema.union(['local', 's3']).default('local'),
+    s3Bucket: Schema.string().default(''),
+    s3Region: Schema.string().default(''),
+    s3Endpoint: Schema.string().default(''),
+    s3AccessKeyId: Schema.string().default(''),
+    s3SecretAccessKey: Schema.string().role('secret').default(''),
+    s3ForcePathStyle: Schema.boolean().default(false),
+    s3PathPrefix: Schema.string().default(''),
+    s3PresignExpiresIn: Schema.number().default(3600).min(60).max(604800),
 }).i18n({
     'zh-CN': zhCN,
 });

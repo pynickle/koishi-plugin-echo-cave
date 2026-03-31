@@ -1,5 +1,6 @@
 {
   "adminMessageProtection": "开启管理员消息保护，开启后管理员发布的消息只能由管理员删除",
+  "adminIds": "管理员 ID 列表，仅这些用户可在私聊使用管理迁移命令",
   "allowContributorDelete": "允许投稿者删除自己投稿的回声洞",
   "allowSenderDelete": "允许原始发送者删除被投稿的回声洞",
   "deleteMediaWhenDeletingMsg": "删除回声洞消息时是否同时删除关联的媒体文件",
@@ -13,5 +14,14 @@
   "rankingTopCount": "排行榜显示的用户数量",
   "forwardSelectTimeout": "合并转发消息选择关联用户的超时时间 (秒)",
   "enableForwardUserSelection": "是否启用合并转发消息的关联用户选择功能",
-  "alpha": "加权随机抽取的调整因子，控制抽取次数对概率的影响程度，值越大影响越明显"
+  "alpha": "加权随机抽取的调整因子，控制抽取次数对概率的影响程度，值越大影响越明显",
+  "mediaStorage": "媒体存储方式：local 为本地，s3 为对象存储",
+  "s3Bucket": "S3 存储桶名称",
+  "s3Region": "S3 区域",
+  "s3Endpoint": "S3 Endpoint，可用于兼容 S3 的私有服务",
+  "s3AccessKeyId": "S3 Access Key ID",
+  "s3SecretAccessKey": "S3 Secret Access Key",
+  "s3ForcePathStyle": "是否强制使用 path-style 访问 S3",
+  "s3PathPrefix": "S3 存储路径前缀，会拼接在 v2/channel/type 目录前",
+  "s3PresignExpiresIn": "S3 私有对象预签名 URL 的有效期 (秒)"
 }

@@ -51,7 +51,7 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
     }
 
     if (cfg.deleteMediaWhenDeletingMsg) {
-        await deleteMediaFilesFromMessage(ctx, caveMsg.content);
+        await deleteMediaFilesFromMessage(ctx, caveMsg.content, cfg);
     }
 
     await ctx.database.remove('echo_cave_v2', id);
@@ -75,7 +75,7 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
 
     const caves = await ctx.database.get('echo_cave_v2', ids);
     for (const cave of caves) {
-        const caveMsg = caves[0];
+        const caveMsg = cave;
 
         if (cfg.adminMessageProtection) {
             const caveUser = await ctx.database.getUser(session.platform, caveMsg.userId);
@@ -105,7 +105,7 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
         }
 
         if (cfg.deleteMediaWhenDeletingMsg) {
-            await deleteMediaFilesFromMessage(ctx, caveMsg.content);
+            await deleteMediaFilesFromMessage(ctx, caveMsg.content, cfg);
         }
 
         await ctx.database.remove('echo_cave_v2', cave.id);

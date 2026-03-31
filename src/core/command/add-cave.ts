@@ -94,7 +94,7 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
             msgJson = message;
         }
 
-        content = JSON.stringify(await processMessageContent(ctx, msgJson, cfg));
+        content = JSON.stringify(await processMessageContent(ctx, msgJson, cfg, channelId));
     }
 
     // If it's a forward message with users and user selection is enabled, ask the user to select related users

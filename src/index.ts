@@ -1,5 +1,10 @@
 import { Config } from './config/config';
 import { addCave } from './core/command/add-cave';
+import {
+    mergeCavesBetweenChannels,
+    migrateLegacyLocalMedia,
+    migrateMediaToS3,
+} from './core/command/admin';
 import { deleteCave, deleteCaves } from './core/command/delete-cave';
 import { getCave, getCaveListByOriginUser, getCaveListByUser } from './core/command/get-cave';
 import { bindUsersToCave } from './core/command/misc/bind-user';
@@ -123,5 +128,25 @@ export function apply(ctx: Context, cfg: Config) {
     // Ranking
     ctx.command('cave.rank [period:string]').action(
         async ({ session }, period) => await getRanking(ctx, session, cfg, period)
+    );
+
+    ctx.command('cave.admin.merge <sourceChannelId:string> <targetChannelId:string> [keepSource:string]').action(
+        async ({ session }, sourceChannelId, targetChannelId, keepSource) =>
+            await mergeCavesBetweenChannels(
+                ctx,
+                session,
+                cfg,
+                sourceChannelId,
+                targetChannelId,
+                keepSource
+            )
+    );
+
+    ctx.command('cave.admin.migrate-local-v2').action(
+        async ({ session }) => await migrateLegacyLocalMedia(ctx, session, cfg)
+    );
+
+    ctx.command('cave.admin.migrate-s3 [keepLocal:string]').action(
+        async ({ session }, keepLocal) => await migrateMediaToS3(ctx, session, cfg, keepLocal)
     );
 }

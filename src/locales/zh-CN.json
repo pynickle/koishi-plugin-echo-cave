@@ -2,6 +2,8 @@
   "echo-cave": {
     "general": {
       "privateChatReminder": "❌ 请在群聊中使用该命令！",
+      "adminPrivateOnly": "❌ 该命令仅允许在私聊中使用！",
+      "adminPermissionDenied": "⛔ 您不在管理员 ID 列表中，无法使用该命令！",
       "noMsgWithId": "🔍 未找到该 ID 的回声洞消息",
       "noTemplatesConfigured": "❌ 未配置回声洞模板，请先配置模板！"
     },
@@ -114,6 +116,37 @@
           "month": "本月",
           "all": "所有时间"
         }
+      }
+    },
+    "cave.admin.merge": {
+      "description": "将一个群聊的回声洞记录合并到另一个群聊",
+      "messages": {
+        "sameChannel": "❌ 源群聊和目标群聊不能相同！",
+        "invalidBoolean": "❌ 布尔参数仅支持 true / false / 1 / 0 / yes / no / 保留 / 删除。",
+        "noSourceCaves": "🔍 源群聊中没有可合并的回声洞记录。",
+        "confirmSummary": "⚠️ 即将执行群聊回声洞合并\n源群聊：{sourceChannelId}\n目标群聊：{targetChannelId}\n源群记录数：{sourceCount}\n目标群现有记录数：{targetCount}\n合并后是否保留源群记录：{keepSource}\n\n本次操作会同步处理关联媒体资源。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
+        "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
+        "confirmCancelled": "🛑 已取消本次操作。",
+        "confirmTimeout": "⌛ 二次确认超时，操作未执行。",
+        "mergeDone": "✅ 合并完成：处理了 {mergedRecords} 条记录，媒体复制 {mediaCopied} 个、移动 {mediaMoved} 个、上传 {mediaUploaded} 个、失败 {mediaFailed} 个。"
+      }
+    },
+    "cave.admin.migrate-local-v2": {
+      "description": "迁移旧本地媒体目录到 V2 分群存储格式",
+      "messages": {
+        "migrateDone": "✅ 本地媒体迁移完成：扫描 {scannedRecords} 条记录，更新 {recordsUpdated} 条记录，复制 {mediaCopied} 个、移动 {mediaMoved} 个、失败 {mediaFailed} 个。"
+      }
+    },
+    "cave.admin.migrate-s3": {
+      "description": "将本地 V2 媒体资源迁移到 S3 存储",
+      "messages": {
+        "invalidBoolean": "❌ 布尔参数仅支持 true / false / 1 / 0 / yes / no / 保留 / 删除。",
+        "s3NotConfigured": "❌ 当前未完成 S3 配置，请先填写 bucket、region 等参数。",
+        "confirmSummary": "⚠️ 即将执行媒体迁移到 S3\n媒体存储模式：{mediaStorage}\nS3 Bucket：{bucket}\nS3 路径前缀：{prefix}\n迁移后是否保留本地媒体：{keepLocal}\n\n此操作会把现有本地 V2 媒体引用改写为 S3 引用。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
+        "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
+        "confirmCancelled": "🛑 已取消本次操作。",
+        "confirmTimeout": "⌛ 二次确认超时，操作未执行。",
+        "migrateDone": "✅ S3 迁移完成：扫描 {scannedRecords} 条记录，更新 {recordsUpdated} 条记录，上传 {mediaUploaded} 个、复制 {mediaCopied} 个、移动 {mediaMoved} 个、删除 {mediaDeleted} 个、失败 {mediaFailed} 个。"
       }
     }
   }

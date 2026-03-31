@@ -1,11 +1,67 @@
 import { Config } from '../../config/config';
 import axios from 'axios';
+import {
+    CopyObjectCommand,
+    DeleteObjectCommand,
+    GetObjectCommand,
+    PutObjectCommand,
+    S3Client,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Context } from 'koishi';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import { v4 as uuidv4 } from 'uuid';
 
-// LRU Cache for base64 conversions
+export type MediaType = 'image' | 'video' | 'file' | 'record';
+
+type MediaStorageMode = 'local' | 's3';
+type MediaTransferMode = 'copy' | 'move';
+
+type MaybeMediaElement = {
+    type: string;
+    data?: Record<string, unknown>;
+    [key: string]: unknown;
+};
+
+interface MediaMutationStats {
+    recordsUpdated: number;
+    mediaCopied: number;
+    mediaMoved: number;
+    mediaUploaded: number;
+    mediaDeleted: number;
+    mediaSkipped: number;
+    mediaFailed: number;
+}
+
+interface MediaTransferPlan {
+    nextRef: string;
+    commit?: () => Promise<void>;
+    rollback?: () => Promise<void>;
+}
+
+interface RewriteResult {
+    content: string;
+    changed: boolean;
+    plans: MediaTransferPlan[];
+}
+
+interface MutationState {
+    transferPlans: Map<string, MediaTransferPlan>;
+}
+
+interface S3Location {
+    bucket: string;
+    key: string;
+}
+
+interface LoadedMedia {
+    buffer: Buffer;
+    contentType?: string;
+    sourceKey: string;
+}
+
 class LRUCache<K, V> {
     private cache: Map<K, V>;
     private maxSize: number;
@@ -18,27 +74,33 @@ class LRUCache<K, V> {
     get(key: K): V | undefined {
         if (!this.cache.has(key)) return undefined;
 
-        // Move to end (most recently used)
-        const value = this.cache.get(key)!;
+        const value = this.cache.get(key);
+        if (value === undefined) {
+            return undefined;
+        }
+
         this.cache.delete(key);
         this.cache.set(key, value);
         return value;
     }
 
     set(key: K, value: V): void {
-        // Remove if exists
         if (this.cache.has(key)) {
             this.cache.delete(key);
         }
 
-        // Add to end
         this.cache.set(key, value);
 
-        // Remove oldest if over limit
         if (this.cache.size > this.maxSize) {
             const firstKey = this.cache.keys().next().value;
-            this.cache.delete(firstKey);
+            if (firstKey !== undefined) {
+                this.cache.delete(firstKey);
+            }
         }
+    }
+
+    delete(key: K): void {
+        this.cache.delete(key);
     }
 
     clear(): void {
@@ -46,110 +108,994 @@ class LRUCache<K, V> {
     }
 }
 
-// Global cache for base64 data
 const base64Cache = new LRUCache<string, string>(200);
-
-// Debounce timer for cleanup operations
 const cleanupTimers: Map<string, NodeJS.Timeout> = new Map();
+const s3ClientCache = new Map<string, S3Client>();
 
-// Counter to reduce cleanup frequency
-const saveCounters: Map<string, number> = new Map();
+function createEmptyStats(): MediaMutationStats {
+    return {
+        recordsUpdated: 0,
+        mediaCopied: 0,
+        mediaMoved: 0,
+        mediaUploaded: 0,
+        mediaDeleted: 0,
+        mediaSkipped: 0,
+        mediaFailed: 0,
+    };
+}
+
+function mergeStats(target: MediaMutationStats, source: MediaMutationStats) {
+    target.recordsUpdated += source.recordsUpdated;
+    target.mediaCopied += source.mediaCopied;
+    target.mediaMoved += source.mediaMoved;
+    target.mediaUploaded += source.mediaUploaded;
+    target.mediaDeleted += source.mediaDeleted;
+    target.mediaSkipped += source.mediaSkipped;
+    target.mediaFailed += source.mediaFailed;
+}
+
+function getStorageMode(cfg: Config): MediaStorageMode {
+    return cfg.mediaStorage === 's3' ? 's3' : 'local';
+}
+
+function hasS3Config(cfg: Config): boolean {
+    return Boolean(cfg.s3Bucket && cfg.s3Region);
+}
+
+function getS3Client(cfg: Config): S3Client {
+    if (!hasS3Config(cfg)) {
+        throw new Error('S3 storage is not configured completely.');
+    }
+
+    const cacheKey = [
+        cfg.s3Bucket,
+        cfg.s3Region,
+        cfg.s3Endpoint || '',
+        cfg.s3AccessKeyId || '',
+        cfg.s3SecretAccessKey || '',
+        cfg.s3ForcePathStyle ? '1' : '0',
+    ].join('|');
+
+    const cached = s3ClientCache.get(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
+    const client = new S3Client({
+        region: cfg.s3Region,
+        endpoint: cfg.s3Endpoint || undefined,
+        forcePathStyle: cfg.s3ForcePathStyle || false,
+        credentials:
+            cfg.s3AccessKeyId && cfg.s3SecretAccessKey
+                ? {
+                      accessKeyId: cfg.s3AccessKeyId,
+                      secretAccessKey: cfg.s3SecretAccessKey,
+                  }
+                : undefined,
+    });
+
+    s3ClientCache.set(cacheKey, client);
+    return client;
+}
+
+function normalizePrefix(prefix?: string): string {
+    return (prefix || '').trim().replace(/^\/+|\/+$/g, '');
+}
+
+function joinKey(...parts: string[]): string {
+    return parts
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => part.replace(/^\/+|\/+$/g, ''))
+        .join('/');
+}
+
+function getMediaDirName(type: MediaType): string {
+    return `${type}s`;
+}
+
+function getDefaultExtension(type: MediaType): string {
+    switch (type) {
+        case 'image':
+            return 'png';
+        case 'video':
+            return 'mp4';
+        case 'record':
+            return 'mp3';
+        default:
+            return 'bin';
+    }
+}
+
+function getMimeTypeByExtension(ext: string, type: MediaType): string {
+    const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mov': 'video/quicktime',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.pdf': 'application/pdf',
+    };
+
+    return (
+        mimeTypes[ext.toLowerCase()] ||
+        (() => {
+            switch (type) {
+                case 'image':
+                    return 'image/jpeg';
+                case 'video':
+                    return 'video/mp4';
+                case 'record':
+                    return 'audio/mpeg';
+                default:
+                    return 'application/octet-stream';
+            }
+        })()
+    );
+}
+
+function getFileExtension(fileName: string | undefined, type: MediaType): string {
+    if (!fileName) {
+        return getDefaultExtension(type);
+    }
+
+    const extension = path.extname(fileName).slice(1).toLowerCase();
+    return extension || getDefaultExtension(type);
+}
+
+function getLocalMediaRoot(ctx: Context): string {
+    return path.join(ctx.baseDir, 'data', 'cave');
+}
+
+function getLocalMediaV2Root(ctx: Context): string {
+    return path.join(getLocalMediaRoot(ctx), 'v2');
+}
+
+function getLocalMediaV2Dir(ctx: Context, channelId: string, type: MediaType): string {
+    return path.join(getLocalMediaV2Root(ctx), encodeURIComponent(channelId), getMediaDirName(type));
+}
+
+function getLegacyMediaDir(ctx: Context, type: MediaType): string {
+    return path.join(getLocalMediaRoot(ctx), getMediaDirName(type));
+}
+
+function toFileUri(filePath: string): string {
+    return `file:///${filePath.replace(/\\/g, '/')}`;
+}
+
+function fromFileUri(fileUri: string): string {
+    return decodeURIComponent(fileUri.replace('file:///', ''));
+}
+
+function isFileUri(value: string | undefined): value is string {
+    return Boolean(value && value.startsWith('file:///'));
+}
+
+function isHttpUrl(value: string | undefined): value is string {
+    return Boolean(value && /^https?:\/\//i.test(value));
+}
+
+function isS3Uri(value: string | undefined): value is string {
+    return Boolean(value && value.startsWith('s3://'));
+}
+
+function toS3Uri(location: S3Location): string {
+    return `s3://${location.bucket}/${location.key}`;
+}
+
+function parseS3Uri(uri: string): S3Location | null {
+    if (!isS3Uri(uri)) {
+        return null;
+    }
+
+    const withoutScheme = uri.slice('s3://'.length);
+    const slashIndex = withoutScheme.indexOf('/');
+    if (slashIndex === -1) {
+        return null;
+    }
+
+    return {
+        bucket: withoutScheme.slice(0, slashIndex),
+        key: withoutScheme.slice(slashIndex + 1),
+    };
+}
+
+function buildS3Key(cfg: Config, channelId: string, type: MediaType, fileName: string): string {
+    return joinKey(
+        normalizePrefix(cfg.s3PathPrefix),
+        'v2',
+        encodeURIComponent(channelId),
+        getMediaDirName(type),
+        fileName
+    );
+}
+
+function normalizePathForComparison(filePath: string): string {
+    return path.resolve(filePath).replace(/\\/g, '/').toLowerCase();
+}
+
+function isPathInsideDir(filePath: string, dirPath: string): boolean {
+    const normalizedFilePath = normalizePathForComparison(filePath);
+    const normalizedDirPath = normalizePathForComparison(dirPath);
+    return normalizedFilePath.startsWith(`${normalizedDirPath}/`) || normalizedFilePath === normalizedDirPath;
+}
+
+function isMediaType(value: string): value is MediaType {
+    return value === 'image' || value === 'video' || value === 'file' || value === 'record';
+}
+
+function getElementFileRef(element: MaybeMediaElement): string | undefined {
+    const fileValue = element.data?.file;
+    return typeof fileValue === 'string' ? fileValue : undefined;
+}
+
+function setElementFileRef(element: MaybeMediaElement, fileRef: string): MaybeMediaElement {
+    return {
+        ...element,
+        data: {
+            ...element.data,
+            file: fileRef,
+            url: undefined,
+        },
+    };
+}
+
+function getContentTypeFromHeaders(
+    headers: Record<string, unknown>,
+    type: MediaType
+): string | undefined {
+    const rawValue = headers['content-type'];
+    const contentType =
+        Array.isArray(rawValue) ? rawValue[0] : typeof rawValue === 'string' ? rawValue : undefined;
+
+    if (!contentType) {
+        return undefined;
+    }
+
+    if (type === 'image' && !contentType.startsWith('image/')) {
+        return undefined;
+    }
+
+    if (
+        type === 'video' &&
+        !contentType.startsWith('video/') &&
+        contentType !== 'application/octet-stream'
+    ) {
+        return undefined;
+    }
+
+    if (type === 'record' && !contentType.startsWith('audio/')) {
+        return undefined;
+    }
+
+    return contentType;
+}
+
+async function writeLocalMedia(
+    ctx: Context,
+    channelId: string,
+    type: MediaType,
+    buffer: Buffer,
+    extension: string
+): Promise<string> {
+    const mediaDir = getLocalMediaV2Dir(ctx, channelId, type);
+    await fs.mkdir(mediaDir, { recursive: true });
+
+    const mediaName = `${uuidv4().replace(/-/g, '')}.${extension}`;
+    const fullMediaPath = path.join(mediaDir, mediaName);
+    await fs.writeFile(fullMediaPath, buffer);
+
+    return fullMediaPath;
+}
+
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+}
+
+async function getObjectBodyBuffer(body: unknown): Promise<Buffer> {
+    if (!body) {
+        return Buffer.alloc(0);
+    }
+
+    if (Buffer.isBuffer(body)) {
+        return body;
+    }
+
+    if (body instanceof Uint8Array) {
+        return Buffer.from(body);
+    }
+
+    if (typeof body === 'string') {
+        return Buffer.from(body);
+    }
+
+    if (body instanceof Readable) {
+        return streamToBuffer(body);
+    }
+
+    const bodyWithTransform = body as {
+        transformToByteArray?: () => Promise<Uint8Array>;
+    };
+    if (typeof bodyWithTransform.transformToByteArray === 'function') {
+        const bytes = await bodyWithTransform.transformToByteArray();
+        return Buffer.from(bytes);
+    }
+
+    const bodyWithArrayBuffer = body as {
+        arrayBuffer?: () => Promise<ArrayBuffer>;
+    };
+    if (typeof bodyWithArrayBuffer.arrayBuffer === 'function') {
+        const arrayBuffer = await bodyWithArrayBuffer.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+    }
+
+    const asyncIterableBody = body as AsyncIterable<Uint8Array>;
+    if (Symbol.asyncIterator in Object(body)) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of asyncIterableBody) {
+            chunks.push(Buffer.from(chunk));
+        }
+        return Buffer.concat(chunks);
+    }
+
+    throw new Error('Unsupported S3 body type.');
+}
+
+async function uploadBufferToS3(
+    cfg: Config,
+    channelId: string,
+    type: MediaType,
+    buffer: Buffer,
+    extension: string,
+    contentType?: string
+): Promise<S3Location> {
+    const client = getS3Client(cfg);
+    const bucket = cfg.s3Bucket;
+    if (!bucket) {
+        throw new Error('S3 bucket is not configured.');
+    }
+
+    const fileName = `${uuidv4().replace(/-/g, '')}.${extension}`;
+    const key = buildS3Key(cfg, channelId, type, fileName);
+
+    await client.send(
+        new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: buffer,
+            ContentType: contentType,
+        })
+    );
+
+    return { bucket, key };
+}
+
+async function deleteS3Object(cfg: Config, location: S3Location): Promise<void> {
+    const client = getS3Client(cfg);
+    await client.send(
+        new DeleteObjectCommand({
+            Bucket: location.bucket,
+            Key: location.key,
+        })
+    );
+}
+
+function encodeCopySource(location: S3Location): string {
+    return `${location.bucket}/${location.key.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+async function copyS3Object(
+    cfg: Config,
+    source: S3Location,
+    target: S3Location
+): Promise<void> {
+    const client = getS3Client(cfg);
+
+    await client.send(
+        new CopyObjectCommand({
+            Bucket: target.bucket,
+            Key: target.key,
+            CopySource: encodeCopySource(source),
+        })
+    );
+}
+
+async function loadMediaBuffer(ctx: Context, fileRef: string, cfg: Config): Promise<LoadedMedia> {
+    if (isFileUri(fileRef)) {
+        const filePath = fromFileUri(fileRef);
+        const buffer = await fs.readFile(filePath);
+        return {
+            buffer,
+            contentType: getMimeTypeByExtension(path.extname(filePath), 'file'),
+            sourceKey: filePath,
+        };
+    }
+
+    if (isS3Uri(fileRef)) {
+        const location = parseS3Uri(fileRef);
+        if (!location) {
+            throw new Error(`Invalid S3 uri: ${fileRef}`);
+        }
+
+        const client = getS3Client(cfg);
+        const response = await client.send(
+            new GetObjectCommand({
+                Bucket: location.bucket,
+                Key: location.key,
+            })
+        );
+
+        const buffer = await getObjectBodyBuffer(response.Body);
+        return {
+            buffer,
+            contentType: response.ContentType,
+            sourceKey: fileRef,
+        };
+    }
+
+    if (isHttpUrl(fileRef)) {
+        const response = await axios.get(fileRef, {
+            responseType: 'arraybuffer',
+            timeout: 30000,
+            validateStatus: () => true,
+        });
+
+        if (response.status < 200 || response.status >= 300) {
+            throw new Error(`Failed to fetch remote media: HTTP ${response.status}`);
+        }
+
+        const contentTypeHeader = response.headers['content-type'];
+        const contentType = Array.isArray(contentTypeHeader)
+            ? contentTypeHeader[0]
+            : contentTypeHeader;
+
+        return {
+            buffer: Buffer.from(response.data),
+            contentType,
+            sourceKey: fileRef,
+        };
+    }
+
+    throw new Error(`Unsupported media reference: ${fileRef}`);
+}
+
+async function createPresignedGetUrl(cfg: Config, location: S3Location): Promise<string> {
+    const client = getS3Client(cfg);
+    return getSignedUrl(
+        client,
+        new GetObjectCommand({
+            Bucket: location.bucket,
+            Key: location.key,
+        }),
+        {
+            expiresIn: cfg.s3PresignExpiresIn || 3600,
+        }
+    );
+}
+
+async function moveLocalFile(sourcePath: string, targetPath: string): Promise<void> {
+    try {
+        await fs.rename(sourcePath, targetPath);
+    } catch (error) {
+        await fs.copyFile(sourcePath, targetPath);
+        await fs.unlink(sourcePath);
+    }
+}
+
+async function transferLocalFileToChannel(
+    ctx: Context,
+    sourcePath: string,
+    type: MediaType,
+    targetChannelId: string,
+    mode: MediaTransferMode
+): Promise<string> {
+    const targetDir = getLocalMediaV2Dir(ctx, targetChannelId, type);
+    if (isPathInsideDir(sourcePath, targetDir)) {
+        return toFileUri(sourcePath);
+    }
+
+    await fs.mkdir(targetDir, { recursive: true });
+
+    const extension = path.extname(sourcePath).slice(1) || getDefaultExtension(type);
+    const targetPath = path.join(targetDir, `${uuidv4().replace(/-/g, '')}.${extension}`);
+
+    await fs.copyFile(sourcePath, targetPath);
+
+    return toFileUri(targetPath);
+}
+
+async function transferS3ObjectToChannel(
+    cfg: Config,
+    source: S3Location,
+    type: MediaType,
+    targetChannelId: string,
+    mode: MediaTransferMode
+): Promise<string> {
+    const bucket = cfg.s3Bucket;
+    if (!bucket) {
+        throw new Error('S3 bucket is not configured.');
+    }
+
+    const extension = path.extname(source.key).slice(1) || getDefaultExtension(type);
+    const key = buildS3Key(cfg, targetChannelId, type, `${uuidv4().replace(/-/g, '')}.${extension}`);
+    const target = { bucket, key };
+
+    if (source.bucket === target.bucket && source.key === target.key) {
+        return toS3Uri(source);
+    }
+
+        await copyS3Object(cfg, source, target);
+        return toS3Uri(target);
+}
+
+function createTransferCacheKey(
+    fileRef: string,
+    targetChannelId: string,
+    targetMode: MediaStorageMode,
+    transferMode: MediaTransferMode
+): string {
+    return [fileRef, targetChannelId, targetMode, transferMode].join('|');
+}
+
+function createDeleteLocalFilePlan(filePath: string): Pick<MediaTransferPlan, 'commit' | 'rollback'> {
+    return {
+        commit: async () => {
+            try {
+                await fs.unlink(filePath);
+                base64Cache.delete(filePath);
+                base64Cache.delete(toFileUri(filePath));
+            } catch (error) {
+                return;
+            }
+        },
+        rollback: async () => {
+            try {
+                await fs.unlink(filePath);
+                base64Cache.delete(filePath);
+                base64Cache.delete(toFileUri(filePath));
+            } catch (error) {
+                return;
+            }
+        },
+    };
+}
+
+function isLegacyLocalMediaRef(ctx: Context, fileRef: string, type: MediaType): boolean {
+    if (!isFileUri(fileRef)) {
+        return false;
+    }
+
+    const filePath = fromFileUri(fileRef);
+    return isPathInsideDir(filePath, getLegacyMediaDir(ctx, type));
+}
+
+async function transferMediaRefToChannel(
+    ctx: Context,
+    fileRef: string,
+    type: MediaType,
+    targetChannelId: string,
+    targetMode: MediaStorageMode,
+    transferMode: MediaTransferMode,
+    cfg: Config,
+    state: MutationState,
+    stats: MediaMutationStats
+): Promise<MediaTransferPlan> {
+    const cacheKey = createTransferCacheKey(fileRef, targetChannelId, targetMode, transferMode);
+    const cachedPlan = state.transferPlans.get(cacheKey);
+    if (cachedPlan) {
+        return cachedPlan;
+    }
+
+    if (targetMode === 'local') {
+        if (isFileUri(fileRef)) {
+            const localSourcePath = fromFileUri(fileRef);
+            const nextRef = await transferLocalFileToChannel(
+                ctx,
+                localSourcePath,
+                type,
+                targetChannelId,
+                transferMode
+            );
+
+            const plan: MediaTransferPlan = {
+                nextRef,
+                rollback: createDeleteLocalFilePlan(fromFileUri(nextRef)).rollback,
+            };
+
+            if (transferMode === 'move') {
+                plan.commit = async () => {
+                    try {
+                        await fs.unlink(localSourcePath);
+                        base64Cache.delete(localSourcePath);
+                        base64Cache.delete(fileRef);
+                    } catch (error) {
+                        return;
+                    }
+                };
+                stats.mediaMoved += 1;
+            } else {
+                stats.mediaCopied += 1;
+            }
+
+            state.transferPlans.set(cacheKey, plan);
+            return plan;
+        }
+
+        const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
+        const extension =
+            path.extname(loaded.sourceKey).slice(1) || getDefaultExtension(type);
+        const targetPath = await writeLocalMedia(ctx, targetChannelId, type, loaded.buffer, extension);
+
+        const plan: MediaTransferPlan = {
+            nextRef: toFileUri(targetPath),
+            rollback: createDeleteLocalFilePlan(targetPath).rollback,
+        };
+
+        if (transferMode === 'move' && isS3Uri(fileRef)) {
+            const source = parseS3Uri(fileRef);
+            if (source) {
+                plan.commit = async () => {
+                    try {
+                        await deleteS3Object(cfg, source);
+                    } catch (error) {
+                        return;
+                    }
+                };
+                stats.mediaDeleted += 1;
+            }
+            stats.mediaMoved += 1;
+        } else {
+            stats.mediaCopied += 1;
+        }
+
+        state.transferPlans.set(cacheKey, plan);
+        return plan;
+    }
+
+    if (isS3Uri(fileRef)) {
+        const source = parseS3Uri(fileRef);
+        if (!source) {
+            throw new Error(`Invalid S3 uri: ${fileRef}`);
+        }
+
+        const nextRef = await transferS3ObjectToChannel(cfg, source, type, targetChannelId, transferMode);
+        const targetLocation = parseS3Uri(nextRef);
+        const plan: MediaTransferPlan = {
+            nextRef,
+            rollback: targetLocation
+                ? async () => {
+                      try {
+                          await deleteS3Object(cfg, targetLocation);
+                      } catch (error) {
+                          return;
+                      }
+                  }
+                : undefined,
+        };
+
+        if (transferMode === 'move') {
+            plan.commit = async () => {
+                try {
+                    await deleteS3Object(cfg, source);
+                } catch (error) {
+                    return;
+                }
+            };
+            stats.mediaMoved += 1;
+            stats.mediaDeleted += 1;
+        } else {
+            stats.mediaCopied += 1;
+        }
+
+        state.transferPlans.set(cacheKey, plan);
+        return plan;
+    }
+
+    const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
+    const extension = path.extname(loaded.sourceKey).slice(1) || getDefaultExtension(type);
+    const location = await uploadBufferToS3(
+        cfg,
+        targetChannelId,
+        type,
+        loaded.buffer,
+        extension,
+        loaded.contentType
+    );
+
+    const nextRef = toS3Uri(location);
+    const targetLocation = parseS3Uri(nextRef);
+    const plan: MediaTransferPlan = {
+        nextRef,
+        rollback: targetLocation
+            ? async () => {
+                  try {
+                      await deleteS3Object(cfg, targetLocation);
+                  } catch (error) {
+                      return;
+                  }
+              }
+            : undefined,
+    };
+
+    if (transferMode === 'move' && isFileUri(fileRef)) {
+        const currentPath = fromFileUri(fileRef);
+        plan.commit = async () => {
+            try {
+                await fs.unlink(currentPath);
+                base64Cache.delete(currentPath);
+                base64Cache.delete(fileRef);
+            } catch (error) {
+                return;
+            }
+        };
+        stats.mediaDeleted += 1;
+        stats.mediaMoved += 1;
+    }
+
+    state.transferPlans.set(cacheKey, plan);
+    stats.mediaUploaded += 1;
+    return plan;
+}
+
+async function mutateMessageContent(
+    ctx: Context,
+    content: string,
+    handler: (element: MaybeMediaElement, type: MediaType) => Promise<MaybeMediaElement>
+): Promise<{ content: string; changed: boolean }> {
+    const parsed = JSON.parse(content);
+    const elements = Array.isArray(parsed) ? parsed : [parsed];
+
+    let changed = false;
+
+    const mutateElement = async (element: MaybeMediaElement): Promise<MaybeMediaElement> => {
+        if (isMediaType(element.type)) {
+            const updated = await handler(element, element.type);
+            if (updated !== element) {
+                changed = true;
+            }
+            return updated;
+        }
+
+        const contentValue = element.data?.content;
+        if (element.type === 'node' && Array.isArray(contentValue)) {
+            const nextContent = await Promise.all(
+                contentValue.map(async (child) => mutateElement(child as MaybeMediaElement))
+            );
+
+            const hasChildChange = nextContent.some((child, index) => child !== contentValue[index]);
+            if (hasChildChange) {
+                changed = true;
+                return {
+                    ...element,
+                    data: {
+                        ...element.data,
+                        content: nextContent,
+                    },
+                };
+            }
+        }
+
+        return element;
+    };
+
+    const nextElements = await Promise.all(elements.map((element) => mutateElement(element)));
+    return {
+        content: JSON.stringify(nextElements),
+        changed,
+    };
+}
+
+async function rewriteMessageMediaStorage(
+    ctx: Context,
+    content: string,
+    targetChannelId: string,
+    targetMode: MediaStorageMode,
+    transferMode: MediaTransferMode,
+    cfg: Config,
+    state: MutationState,
+    stats: MediaMutationStats,
+    shouldRewrite?: (fileRef: string, type: MediaType) => boolean
+): Promise<RewriteResult> {
+    const planSet = new Set<MediaTransferPlan>();
+    const rewritten = await mutateMessageContent(ctx, content, async (element, type) => {
+        const currentRef = getElementFileRef(element);
+        if (!currentRef) {
+            stats.mediaSkipped += 1;
+            return element;
+        }
+
+        if (shouldRewrite && !shouldRewrite(currentRef, type)) {
+            stats.mediaSkipped += 1;
+            return element;
+        }
+
+        try {
+            const plan = await transferMediaRefToChannel(
+                ctx,
+                currentRef,
+                type,
+                targetChannelId,
+                targetMode,
+                transferMode,
+                cfg,
+                state,
+                stats
+            );
+            planSet.add(plan);
+
+            if (plan.nextRef === currentRef) {
+                stats.mediaSkipped += 1;
+                return element;
+            }
+
+            return setElementFileRef(element, plan.nextRef);
+        } catch (error) {
+            stats.mediaFailed += 1;
+            ctx.logger.warn(`Failed to rewrite media reference: ${currentRef}, ${error}`);
+            return element;
+        }
+    });
+
+    if (rewritten.changed) {
+        stats.recordsUpdated += 1;
+    }
+
+    return {
+        content: rewritten.content,
+        changed: rewritten.changed,
+        plans: [...planSet],
+    };
+}
+
+async function runTransferPlans(plans: MediaTransferPlan[], phase: 'commit' | 'rollback') {
+    for (const plan of plans) {
+        const action = phase === 'commit' ? plan.commit : plan.rollback;
+        if (action) {
+            await action();
+        }
+    }
+}
+
+async function walkDirectories(rootDir: string): Promise<string[]> {
+    let entries;
+    try {
+        entries = await fs.readdir(rootDir, { withFileTypes: true });
+    } catch (error) {
+        return [];
+    }
+
+    const directories = [rootDir];
+    for (const entry of entries) {
+        if (entry.isDirectory()) {
+            const childPath = path.join(rootDir, entry.name);
+            directories.push(...(await walkDirectories(childPath)));
+        }
+    }
+
+    return directories;
+}
+
+async function collectManagedMediaFiles(
+    ctx: Context,
+    type: MediaType
+): Promise<Array<{ path: string; size: number; mtime: number }>> {
+    const rootDir = getLocalMediaRoot(ctx);
+    const directories = await walkDirectories(rootDir);
+    const targetDirName = getMediaDirName(type);
+    const fileInfos: Array<{ path: string; size: number; mtime: number }> = [];
+
+    for (const directory of directories) {
+        if (path.basename(directory) !== targetDirName) {
+            continue;
+        }
+
+        let files: string[];
+        try {
+            files = await fs.readdir(directory);
+        } catch (error) {
+            continue;
+        }
+
+        for (const file of files) {
+            const filePath = path.join(directory, file);
+            try {
+                const stats = await fs.stat(filePath);
+                if (!stats.isFile()) {
+                    continue;
+                }
+
+                fileInfos.push({
+                    path: filePath,
+                    size: stats.size,
+                    mtime: stats.mtimeMs,
+                });
+            } catch (error) {
+                continue;
+            }
+        }
+    }
+
+    return fileInfos;
+}
 
 export async function saveMedia(
     ctx: Context,
-    mediaElement: Record<string, any>,
-    type: 'image' | 'video' | 'file' | 'record',
-    cfg: Config
+    mediaElement: Record<string, unknown>,
+    type: MediaType,
+    cfg: Config,
+    channelId: string
 ) {
-    const mediaUrl: string = mediaElement.url;
-    const originalMediaName: string = mediaElement.file;
+    const mediaUrl = typeof mediaElement.url === 'string' ? mediaElement.url : '';
+    const originalMediaName =
+        typeof mediaElement.file === 'string' ? mediaElement.file : `media.${getDefaultExtension(type)}`;
+    const extension = getFileExtension(originalMediaName, type);
 
-    const ext = (() => {
-        const i = originalMediaName.lastIndexOf('.');
-        return i === -1
-            ? type === 'image'
-                ? 'png'
-                : type === 'video'
-                  ? 'mp4'
-                  : type === 'record'
-                    ? 'mp3'
-                    : 'bin'
-            : originalMediaName.slice(i + 1).toLowerCase();
-    })();
-
-    const mediaDir = path.join(ctx.baseDir, 'data', 'cave', type + 's');
-    const mediaName = uuidv4().replace(/-/g, '');
-    const fullMediaPath = path.join(mediaDir, `${mediaName}.${ext}`);
-
-    ctx.logger.info(`Saving ${type} from ${mediaUrl} -> ${fullMediaPath}`);
+    if (!mediaUrl) {
+        return mediaUrl;
+    }
 
     try {
-        await fs.mkdir(mediaDir, { recursive: true });
-
-        const res = await axios.get(mediaUrl, {
+        const response = await axios.get(mediaUrl, {
             responseType: 'arraybuffer',
             validateStatus: () => true,
             timeout: 30000,
         });
 
-        if (res.status < 200 || res.status >= 300) {
+        if (response.status < 200 || response.status >= 300) {
             ctx.logger.warn(
-                `${type.charAt(0).toUpperCase() + type.slice(1)} download failed: HTTP ${res.status}`
+                `${type.charAt(0).toUpperCase() + type.slice(1)} download failed: HTTP ${response.status}`
             );
             return mediaUrl;
         }
 
-        const contentType = res.headers['content-type'];
-        if (contentType) {
-            if (type === 'image' && !contentType.startsWith('image/')) {
-                ctx.logger.warn(`Invalid image content-type: ${contentType}`);
-                return mediaUrl;
-            }
-            if (
-                type === 'video' &&
-                !contentType.startsWith('video/') &&
-                contentType !== 'application/octet-stream'
-            ) {
-                ctx.logger.warn(`Invalid video content-type: ${contentType}`);
-                return mediaUrl;
-            }
-            if (type === 'record' && !contentType.startsWith('audio/')) {
-                ctx.logger.warn(`Invalid record content-type: ${contentType}`);
-                return mediaUrl;
-            }
-            // For file type, don't strictly check content-type
+        const contentType = getContentTypeFromHeaders(response.headers, type);
+        if (!contentType && type !== 'file' && type !== 'video') {
+            ctx.logger.warn(`Invalid ${type} content-type for ${mediaUrl}`);
+            return mediaUrl;
         }
 
-        const buffer = Buffer.from(res.data);
-        if (!buffer || buffer.length === 0) {
+        const buffer = Buffer.from(response.data);
+        if (buffer.length === 0) {
             ctx.logger.warn(`Downloaded ${type} buffer is empty`);
             return mediaUrl;
         }
 
-        await fs.writeFile(fullMediaPath, buffer);
+        if (getStorageMode(cfg) === 's3') {
+            const location = await uploadBufferToS3(
+                cfg,
+                channelId,
+                type,
+                buffer,
+                extension,
+                contentType || getMimeTypeByExtension(`.${extension}`, type)
+            );
+            return toS3Uri(location);
+        }
 
-        ctx.logger.info(
-            `${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully: ${fullMediaPath} (${(buffer.length / (1024 * 1024)).toFixed(2)} MB)`
-        );
-
-        await debouncedCleanup(ctx, cfg, type);
-
-        return fullMediaPath;
-    } catch (err) {
-        ctx.logger.error(`Failed to save ${type}: ${err}`);
+        const savedPath = await writeLocalMedia(ctx, channelId, type, buffer, extension);
+        await debouncedCleanup(ctx, cfg, type, channelId);
+        return savedPath;
+    } catch (error) {
+        ctx.logger.error(`Failed to save ${type}: ${error}`);
         return mediaUrl;
     }
 }
 
-async function debouncedCleanup(
-    ctx: Context,
-    cfg: Config,
-    type: 'image' | 'video' | 'file' | 'record'
-) {
-    const key = type;
+async function debouncedCleanup(ctx: Context, cfg: Config, type: MediaType, channelId: string) {
+    const key = `${channelId}:${type}`;
 
     if (cleanupTimers.has(key)) {
-        clearTimeout(cleanupTimers.get(key)!);
+        clearTimeout(cleanupTimers.get(key));
     }
 
     const timer = setTimeout(async () => {
@@ -160,159 +1106,121 @@ async function debouncedCleanup(
     cleanupTimers.set(key, timer);
 }
 
-export async function processMediaElement(ctx: Context, element: any, cfg: Config) {
-    if (
-        element.type === 'image' ||
-        element.type === 'video' ||
-        element.type === 'file' ||
-        element.type === 'record'
-    ) {
-        const savedPath = await saveMedia(
-            ctx,
-            element.data,
-            element.type as 'image' | 'video' | 'file' | 'record',
-            cfg
-        );
-
-        // Convert savedPath to file URI
-        const fileUri = `file:///${savedPath.replace(/\\/g, '/')}`;
+export async function processMediaElement(
+    ctx: Context,
+    element: MaybeMediaElement,
+    cfg: Config,
+    channelId: string
+) {
+    if (isMediaType(element.type)) {
+        const savedPath = await saveMedia(ctx, element.data || {}, element.type, cfg, channelId);
+        const fileRef =
+            typeof savedPath === 'string' && isS3Uri(savedPath)
+                ? savedPath
+                : typeof savedPath === 'string' && isHttpUrl(savedPath)
+                  ? savedPath
+                  : typeof savedPath === 'string'
+                    ? toFileUri(savedPath)
+                    : '';
 
         return {
             ...element,
             data: {
                 ...element.data,
-                file: fileUri,
-                // Remove the url field
+                file: fileRef,
                 url: undefined,
             },
         };
     }
+
     return element;
 }
 
-// Convert file URI to base64 data URL with caching
-export async function convertFileUriToBase64(ctx: Context, element: any): Promise<any> {
-    if (
-        element.type === 'image' ||
-        element.type === 'video' ||
-        element.type === 'file' ||
-        element.type === 'record'
-    ) {
-        // Extract file path from file URI
-        const fileUri = element.data.file;
-        const filePath = decodeURIComponent(fileUri.replace('file:///', ''));
-
-        // 检查缓存
-        const cachedData = base64Cache.get(filePath);
-        if (cachedData) {
-            ctx.logger.debug(`Using cached base64 for: ${filePath}`);
-            return {
-                ...element,
-                data: {
-                    ...element.data,
-                    file: cachedData,
-                },
-            };
+export async function resolveMediaElementForSend(
+    ctx: Context,
+    element: MaybeMediaElement,
+    cfg: Config
+): Promise<MaybeMediaElement> {
+    if (isMediaType(element.type)) {
+        const fileRef = getElementFileRef(element);
+        if (!fileRef) {
+            return element;
         }
 
-        try {
-            const startTime = Date.now();
+        const isS3Media = isS3Uri(fileRef);
 
-            // Read file content and convert to base64
-            const buffer = await fs.readFile(filePath);
-            const base64 = buffer.toString('base64');
+        if (isS3Media) {
+            const location = parseS3Uri(fileRef);
+            if (!location) {
+                return element;
+            }
 
-            // Determine MIME type
-            const ext = path.extname(filePath).toLowerCase();
-            const mimeTypes: Record<string, string> = {
-                // Images
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.png': 'image/png',
-                '.gif': 'image/gif',
-                '.webp': 'image/webp',
-                // Videos
-                '.mp4': 'video/mp4',
-                '.webm': 'video/webm',
-                '.mov': 'video/quicktime',
-                // Audio
-                '.mp3': 'audio/mpeg',
-                '.wav': 'audio/wav',
-                '.ogg': 'audio/ogg',
-            };
-
-            const mimeType =
-                mimeTypes[ext] ||
-                (() => {
-                    switch (element.type) {
-                        case 'image':
-                            return 'image/jpeg';
-                        case 'video':
-                            return 'video/mp4';
-                        case 'record':
-                            return 'audio/mpeg';
-                        default:
-                            return 'application/octet-stream';
-                    }
-                })();
-
-            const dataUrl = `data:${mimeType};base64,${base64}`;
-
-            base64Cache.set(filePath, dataUrl);
-
-            const duration = Date.now() - startTime;
-            ctx.logger.debug(
-                `Converted ${element.type} to base64: ${filePath} (${(buffer.length / (1024 * 1024)).toFixed(2)} MB, ${duration}ms)`
-            );
-
-            return {
-                ...element,
-                data: {
-                    ...element.data,
-                    file: dataUrl,
-                },
-            };
-        } catch (err) {
-            ctx.logger.error(`Failed to convert ${element.type} to base64: ${err}`);
-            return element; // Return original element if conversion fails
+            try {
+                const presignedUrl = await createPresignedGetUrl(cfg, location);
+                return setElementFileRef(element, presignedUrl);
+            } catch (error) {
+                ctx.logger.error(`Failed to generate presigned url for ${fileRef}: ${error}`);
+                return element;
+            }
         }
-    } else if (element.type === 'node') {
-        // Handle node type, which contains an array of content elements
-        const processedContent = await Promise.all(
-            element.data.content.map(async (contentElement: any) => {
-                // Recursively convert any media elements in the content array
-                return await convertFileUriToBase64(ctx, contentElement);
-            })
-        );
 
+        if (!cfg.useBase64ForMedia) {
+            return element;
+        }
+
+        if (cfg.useBase64ForMedia) {
+            const cacheKey = fileRef;
+            const cached = base64Cache.get(cacheKey);
+            if (cached) {
+                return setElementFileRef(element, cached);
+            }
+
+            try {
+                const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
+                const sourceExt = path.extname(loaded.sourceKey);
+                const mimeType = loaded.contentType || getMimeTypeByExtension(sourceExt, element.type);
+                const dataUrl = `data:${mimeType};base64,${loaded.buffer.toString('base64')}`;
+                base64Cache.set(cacheKey, dataUrl);
+                return setElementFileRef(element, dataUrl);
+            } catch (error) {
+                ctx.logger.error(`Failed to convert ${element.type} to base64: ${error}`);
+                return element;
+            }
+        }
+    }
+
+    const contentValue = element.data?.content;
+    if (element.type === 'node' && Array.isArray(contentValue)) {
         return {
             ...element,
             data: {
                 ...element.data,
-                content: processedContent,
+                content: await Promise.all(
+                    contentValue.map(async (contentElement) =>
+                        resolveMediaElementForSend(ctx, contentElement as MaybeMediaElement, cfg)
+                    )
+                ),
             },
         };
     }
+
     return element;
 }
 
-// Check and clean up media files to ensure they don't exceed the configured size limit
-export async function checkAndCleanMediaFiles(
-    ctx: Context,
-    cfg: Config,
-    type: 'image' | 'video' | 'file' | 'record'
-) {
-    // If size limit is not enabled, return directly
+export async function checkAndCleanMediaFiles(ctx: Context, cfg: Config, type: MediaType) {
+    if (getStorageMode(cfg) !== 'local') {
+        return;
+    }
+
     if (!cfg.enableSizeLimit) {
         return;
     }
 
     const startTime = Date.now();
-    const mediaDir = path.join(ctx.baseDir, 'data', 'cave', type + 's');
     const maxSize = (() => {
         switch (type) {
             case 'image':
-                return (cfg.maxImageSize || 100) * 1024 * 1024; // Convert to bytes
+                return (cfg.maxImageSize || 100) * 1024 * 1024;
             case 'video':
                 return (cfg.maxVideoSize || 500) * 1024 * 1024;
             case 'file':
@@ -323,166 +1231,221 @@ export async function checkAndCleanMediaFiles(
     })();
 
     try {
-        // Get all files in the directory
-        let files: string[];
-        try {
-            files = await fs.readdir(mediaDir);
-        } catch (err) {
+        const fileInfos = await collectManagedMediaFiles(ctx, type);
+        if (fileInfos.length === 0) {
             return;
         }
 
-        if (files.length === 0) {
+        const totalSize = fileInfos.reduce((sum, file) => sum + file.size, 0);
+        if (totalSize <= maxSize) {
+            ctx.logger.debug(`${type} check completed in ${Date.now() - startTime}ms: no cleanup needed`);
             return;
         }
 
-        // Get file information (path, size, creation time)
-        const fileInfos = await Promise.all(
-            files.map(async (file) => {
-                const filePath = path.join(mediaDir, file);
-                try {
-                    const stats = await fs.stat(filePath);
-                    return {
-                        path: filePath,
-                        size: stats.size,
-                        mtime: stats.mtimeMs,
-                    };
-                } catch (err) {
-                    return null;
-                }
-            })
-        );
+        fileInfos.sort((a, b) => a.mtime - b.mtime);
 
-        const validFileInfos = fileInfos.filter(
-            (info): info is NonNullable<typeof info> => info !== null
-        );
-
-        if (validFileInfos.length === 0) {
-            return;
-        }
-
-        // Calculate total size
-        const totalSize = validFileInfos.reduce((sum, file) => sum + file.size, 0);
-
-        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-        const maxSizeMB = (maxSize / (1024 * 1024)).toFixed(2);
-
-        ctx.logger.debug(
-            `${type} directory: ${validFileInfos.length} files, ${totalSizeMB} MB / ${maxSizeMB} MB`
-        );
-
-        // If total size exceeds limit, delete the oldest files
-        if (totalSize > maxSize) {
-            ctx.logger.warn(
-                `${type} directory size exceeds limit! Total: ${totalSizeMB} MB, Max: ${maxSizeMB} MB`
-            );
-
-            // Sort by modification time, oldest files first
-            validFileInfos.sort((a, b) => a.mtime - b.mtime);
-
-            let currentSize = totalSize;
-            const filesToDelete: typeof validFileInfos = [];
-
-            // Calculate which files to delete
-            for (const file of validFileInfos) {
-                if (currentSize <= maxSize) {
-                    break;
-                }
-                filesToDelete.push(file);
-                currentSize -= file.size;
+        let currentSize = totalSize;
+        const filesToDelete: Array<{ path: string; size: number }> = [];
+        for (const file of fileInfos) {
+            if (currentSize <= maxSize) {
+                break;
             }
 
-            const deleteResults = await Promise.allSettled(
-                filesToDelete.map(async (file) => {
-                    await fs.unlink(file.path);
-
-                    base64Cache.get(file.path);
-
-                    return file;
-                })
-            );
-
-            let deletedCount = 0;
-            let deletedSize = 0;
-
-            deleteResults.forEach((result, index) => {
-                if (result.status === 'fulfilled') {
-                    deletedCount++;
-                    deletedSize += filesToDelete[index].size;
-                    ctx.logger.info(
-                        `Deleted old ${type}: ${path.basename(filesToDelete[index].path)} (${(filesToDelete[index].size / (1024 * 1024)).toFixed(2)} MB)`
-                    );
-                } else {
-                    ctx.logger.warn(
-                        `Failed to delete ${type}: ${path.basename(filesToDelete[index].path)} - ${result.reason}`
-                    );
-                }
-            });
-
-            const duration = Date.now() - startTime;
-            ctx.logger.info(
-                `Cleanup completed in ${duration}ms: deleted ${deletedCount}/${filesToDelete.length} files (${(deletedSize / (1024 * 1024)).toFixed(2)} MB), new size: ${((totalSize - deletedSize) / (1024 * 1024)).toFixed(2)} MB`
-            );
-        } else {
-            const duration = Date.now() - startTime;
-            ctx.logger.debug(`${type} check completed in ${duration}ms: no cleanup needed`);
+            filesToDelete.push({ path: file.path, size: file.size });
+            currentSize -= file.size;
         }
-    } catch (err) {
-        ctx.logger.error(`Failed to check and clean ${type} files: ${err}`);
+
+        for (const file of filesToDelete) {
+            try {
+                await fs.unlink(file.path);
+                base64Cache.delete(file.path);
+                ctx.logger.info(`Deleted old ${type}: ${path.basename(file.path)}`);
+            } catch (error) {
+                ctx.logger.warn(`Failed to delete ${type}: ${file.path}, ${error}`);
+            }
+        }
+    } catch (error) {
+        ctx.logger.error(`Failed to check and clean ${type} files: ${error}`);
     }
 }
 
-// Delete media files contained in messages
-export async function deleteMediaFilesFromMessage(ctx: Context, content: string) {
-    const deletedFiles: string[] = [];
-    const failedFiles: string[] = [];
+export async function deleteMediaFilesFromMessage(ctx: Context, content: string, cfg: Config) {
+    await mutateMessageContent(ctx, content, async (element, type) => {
+        const fileRef = getElementFileRef(element);
+        if (!fileRef) {
+            return element;
+        }
 
-    async function processElement(element: any) {
-        if (
-            element.type === 'image' ||
-            element.type === 'video' ||
-            element.type === 'file' ||
-            element.type === 'record'
-        ) {
-            const fileUri = element.data?.file;
-            if (fileUri && fileUri.startsWith('file:///')) {
-                // Extract local file path
-                const filePath = decodeURIComponent(fileUri.replace('file:///', ''));
-
-                // Check if file exists and delete it
-                try {
-                    await fs.access(filePath);
-                    await fs.unlink(filePath);
-
-                    base64Cache.get(filePath);
-
-                    deletedFiles.push(filePath);
-                    ctx.logger.debug(`Deleted media file: ${filePath}`);
-                } catch (err) {
-                    failedFiles.push(filePath);
-                    ctx.logger.warn(`Failed to delete media file: ${filePath}, error: ${err}`);
+        try {
+            if (isFileUri(fileRef)) {
+                const filePath = fromFileUri(fileRef);
+                await fs.unlink(filePath);
+                base64Cache.delete(fileRef);
+                base64Cache.delete(filePath);
+            } else if (isS3Uri(fileRef)) {
+                const location = parseS3Uri(fileRef);
+                if (location) {
+                    await deleteS3Object(cfg, location);
                 }
             }
-        } else if (element.type === 'node' && element.data?.content) {
-            // Recursively process content elements in node type
-            await Promise.all(
-                element.data.content.map((contentElement: any) => processElement(contentElement))
+        } catch (error) {
+            ctx.logger.warn(`Failed to delete ${type} media: ${fileRef}, ${error}`);
+        }
+
+        return element;
+    });
+}
+
+export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
+    const caves = await ctx.database.get('echo_cave_v2', {});
+    const stats = createEmptyStats();
+    const state: MutationState = {
+        transferPlans: new Map(),
+    };
+    const failedRecordIds: number[] = [];
+
+    for (const cave of caves) {
+        let rewritten: RewriteResult | null = null;
+        try {
+            rewritten = await rewriteMessageMediaStorage(
+                ctx,
+                cave.content,
+                cave.channelId,
+                'local',
+                'move',
+                cfg,
+                state,
+                stats,
+                (fileRef, type) => isLegacyLocalMediaRef(ctx, fileRef, type)
             );
+
+            if (rewritten.content !== cave.content) {
+                await ctx.database.set('echo_cave_v2', cave.id, { content: rewritten.content });
+                await runTransferPlans(rewritten.plans, 'commit');
+            }
+        } catch (error) {
+            if (rewritten) {
+                await runTransferPlans(rewritten.plans, 'rollback');
+            }
+            failedRecordIds.push(cave.id);
+            ctx.logger.warn(`Failed to migrate legacy local media for cave #${cave.id}: ${error}`);
         }
     }
 
-    try {
-        const elements = JSON.parse(content);
-        const mediaElements = Array.isArray(elements) ? elements : [elements];
+    return {
+        scannedRecords: caves.length,
+        failedRecordIds,
+        ...stats,
+    };
+}
 
-        await Promise.all(mediaElements.map((element) => processElement(element)));
+export async function migrateLocalMediaToS3(ctx: Context, cfg: Config, keepLocal: boolean) {
+    const caves = await ctx.database.get('echo_cave_v2', {});
+    const stats = createEmptyStats();
+    const state: MutationState = {
+        transferPlans: new Map(),
+    };
+    const failedRecordIds: number[] = [];
 
-        if (deletedFiles.length > 0) {
-            ctx.logger.info(`Deleted ${deletedFiles.length} media file(s) from message`);
+    for (const cave of caves) {
+        let rewritten: RewriteResult | null = null;
+        try {
+            rewritten = await rewriteMessageMediaStorage(
+                ctx,
+                cave.content,
+                cave.channelId,
+                's3',
+                keepLocal ? 'copy' : 'move',
+                cfg,
+                state,
+                stats,
+                (fileRef) => isFileUri(fileRef)
+            );
+
+            if (rewritten.content !== cave.content) {
+                await ctx.database.set('echo_cave_v2', cave.id, { content: rewritten.content });
+                await runTransferPlans(rewritten.plans, 'commit');
+            }
+        } catch (error) {
+            if (rewritten) {
+                await runTransferPlans(rewritten.plans, 'rollback');
+            }
+            failedRecordIds.push(cave.id);
+            ctx.logger.warn(`Failed to migrate local media to S3 for cave #${cave.id}: ${error}`);
         }
-        if (failedFiles.length > 0) {
-            ctx.logger.warn(`Failed to delete ${failedFiles.length} media file(s)`);
-        }
-    } catch (err) {
-        ctx.logger.error(`Failed to parse message content when deleting media: ${err}`);
     }
+
+    return {
+        scannedRecords: caves.length,
+        failedRecordIds,
+        ...stats,
+    };
+}
+
+export async function mergeChannelCaves(
+    ctx: Context,
+    cfg: Config,
+    sourceChannelId: string,
+    targetChannelId: string,
+    keepSource: boolean
+) {
+    const sourceCaves = await ctx.database.get('echo_cave_v2', { channelId: sourceChannelId });
+    const targetMode = getStorageMode(cfg);
+    const transferMode: MediaTransferMode = keepSource ? 'copy' : 'move';
+    const stats = createEmptyStats();
+    const state: MutationState = {
+        transferPlans: new Map(),
+    };
+    const failedRecordIds: number[] = [];
+
+    let mergedRecords = 0;
+    for (const cave of sourceCaves) {
+        let rewritten: RewriteResult | null = null;
+        try {
+            rewritten = await rewriteMessageMediaStorage(
+                ctx,
+                cave.content,
+                targetChannelId,
+                targetMode,
+                transferMode,
+                cfg,
+                state,
+                stats
+            );
+
+            if (keepSource) {
+                await ctx.database.create('echo_cave_v2', {
+                    channelId: targetChannelId,
+                    createTime: cave.createTime,
+                    userId: cave.userId,
+                    originUserId: cave.originUserId,
+                    type: cave.type,
+                    content: rewritten.content,
+                    relatedUsers: cave.relatedUsers,
+                    drawCount: cave.drawCount,
+                });
+            } else {
+                await ctx.database.set('echo_cave_v2', cave.id, {
+                    channelId: targetChannelId,
+                    content: rewritten.content,
+                });
+            }
+
+            await runTransferPlans(rewritten.plans, 'commit');
+            mergedRecords += 1;
+        } catch (error) {
+            if (rewritten) {
+                await runTransferPlans(rewritten.plans, 'rollback');
+            }
+            failedRecordIds.push(cave.id);
+            ctx.logger.warn(`Failed to merge cave #${cave.id}: ${error}`);
+        }
+    }
+
+    return {
+        sourceCount: sourceCaves.length,
+        mergedRecords,
+        failedRecordIds,
+        ...stats,
+    };
 }

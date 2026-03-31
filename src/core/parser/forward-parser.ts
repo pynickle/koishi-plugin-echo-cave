@@ -55,7 +55,7 @@ async function processForwardMessageContent(
     // deal with normal message
     return Promise.all(
         msg.message.map(async (element) => {
-            return processMediaElement(ctx, element, cfg);
+            return (await processMediaElement(ctx, element, cfg, session.channelId)) as CQCode;
         })
     );
 }

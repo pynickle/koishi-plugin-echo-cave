@@ -8,28 +8,26 @@ export async function listenForUserMessage(
     onMessage: (message: string) => Promise<boolean>,
     onTimeout?: () => Promise<void>
 ): Promise<void> {
-    const { userId, channelId } = session;
+    const { userId, channelId, guildId, platform } = session;
 
     // Send prompt message
-    const promptMessageId = await session.onebot.sendGroupMsg(channelId, prompt);
+    await session.send(prompt);
 
     // Create message listener
     const listener = async (msgSession: Session) => {
         // Check if it's the same user sending message in the same channel
-        if (msgSession.userId === userId && msgSession.channelId === channelId) {
+        if (
+            msgSession.userId === userId &&
+            msgSession.channelId === channelId &&
+            msgSession.guildId === guildId &&
+            msgSession.platform === platform
+        ) {
             // Process user message
             const shouldContinue = await onMessage(msgSession.content);
 
             if (!shouldContinue) {
                 // Remove listener
                 cancelListener();
-
-                // Try to recall prompt message
-                try {
-                    await session.onebot.deleteMsg(promptMessageId);
-                } catch (error) {
-                    // Ignore recall failure
-                }
 
                 cancelTimeout();
             }
@@ -47,13 +45,6 @@ export async function listenForUserMessage(
         // Call timeout callback
         if (onTimeout) {
             await onTimeout();
-        }
-
-        // Try to recall prompt message
-        try {
-            await session.onebot.deleteMsg(promptMessageId);
-        } catch (error) {
-            // Ignore recall failure
         }
     }, timeout);
 }
