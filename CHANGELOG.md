@@ -1,3 +1,13 @@
+## [1.29.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.0...v1.29.1) (2026-04-01)
+
+### ♻️ Code Refactoring
+
+* improve ([81eb894](https://github.com/pynickle/koishi-plugin-echo-cave/commit/81eb894d20c72d83dcbcded7d3af358161a2a9df))
+
+### 🚀 Improvements
+
+* config ([2f158f2](https://github.com/pynickle/koishi-plugin-echo-cave/commit/2f158f2013a973a14be8d5743e99ad7925027ec0))
+
 ## [1.29.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.28.2...v1.29.0) (2026-03-31)
 
 ### ✨ Features
