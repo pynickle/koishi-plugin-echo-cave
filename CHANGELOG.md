@@ -1,3 +1,10 @@
+## [1.29.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.1...v1.29.2) (2026-04-02)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1022.0 ([f452835](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f452835fd964a88031ac1f12594834b8c1a631d1))
+* **deps:** update dependency esbuild to ^0.27.5 ([cc2eed8](https://github.com/pynickle/koishi-plugin-echo-cave/commit/cc2eed88e92b8bcc1dc4fdd00a7c9ca7c0ddaf07))
+
 ## [1.29.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.0...v1.29.1) (2026-04-01)
 
 ### ♻️ Code Refactoring
