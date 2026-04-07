@@ -1,3 +1,10 @@
+## [1.29.5](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.4...v1.29.5) (2026-04-07)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/client-s3 to ^3.1025.0 ([c479cd1](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c479cd18f9a14690c693a0feec9590e8f569d9df))
+* **deps:** update dependency oxfmt to ^0.44.0 ([eac295b](https://github.com/pynickle/koishi-plugin-echo-cave/commit/eac295be1c07fec2a76afa98a3f74e34e949a367))
+
 ## [1.29.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.3...v1.29.4) (2026-04-07)
 
 ### 🔧 Miscellaneous Changes
