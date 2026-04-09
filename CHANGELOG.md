@@ -1,3 +1,11 @@
+## [1.29.6](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.5...v1.29.6) (2026-04-09)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/client-s3 to ^3.1027.0 ([0ff282c](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0ff282ce421852c562834f6fa614cdf8e32e0ef7))
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1026.0 ([bd7d46b](https://github.com/pynickle/koishi-plugin-echo-cave/commit/bd7d46b2d3569fe8f6e558845d7845a93aebffb4))
+* **deps:** update dependency axios to ^1.15.0 ([f994fb6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f994fb6cc77eab45a2a283acc754e41aac92dea7))
+
 ## [1.29.5](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.4...v1.29.5) (2026-04-07)
 
 ### 🔧 Miscellaneous Changes
