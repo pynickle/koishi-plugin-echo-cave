@@ -35,12 +35,20 @@
       "messages": {
         "noMsgInCave": "🚀 回声洞中暂无消息，快使用 \"cave.echo\" 命令添加第一条消息吧！",
         "sendPartialFailure": "⚠️ 回声洞标题已发送，但正文发送失败了，请稍后再试。",
-        "sendFailedAutoDeleted": "⚠️ 回声洞 #{id} 发送失败，已自动从回声洞删除。错误：{errorMessage}",
-        "sendFailedAutoDeleteAlsoFailed": "⚠️ 回声洞 #{id} 发送失败，且自动删除也失败了，请管理员尽快处理。发送错误：{errorMessage}；删除错误：{deleteErrorMessage}",
-        "sendFailedRecordedForDailyReport": "⚠️ 回声洞 #{id} 发送失败，已记录本次异常，并将在每日 {summaryTime} 汇总上报给管理员 {adminId}。错误：{errorMessage}",
-        "sendFailedRecordedWithoutAdmin": "⚠️ 回声洞 #{id} 发送失败，已记录本次异常，但尚未配置日报管理员，暂时无法上报。当前汇总时间：{summaryTime}。错误：{errorMessage}",
-        "sendFailedReportRecordFailed": "⚠️ 回声洞 #{id} 发送失败，而且异常记录写入失败，无法纳入日报，请检查数据库或日志。错误：{errorMessage}",
-        "sendFailedIgnored": "⚠️ 回声洞 #{id} 发送失败，当前配置为“不额外处理”，本次不会自动删除或上报管理员。错误：{errorMessage}"
+        "sendBodyFailed": "回声洞正文发送失败",
+        "sendFailedAutoDeleted": "⚠️ 回声洞 #{id} 发送失败，已自动从回声洞删除。",
+        "sendFailedAutoDeleteAlsoFailed": "⚠️ 回声洞 #{id} 发送失败，自动删除也失败了，请管理员处理。",
+        "sendFailedRecordedForDailyReport": "⚠️ 回声洞 #{id} 发送失败，已记录，并会在每日 {summaryTime} 汇总上报给管理员。",
+        "sendFailedRecordedWithoutAdmin": "⚠️ 回声洞 #{id} 发送失败，已记录，但当前未配置管理员，暂时不会上报。",
+        "sendFailedReportRecordFailed": "⚠️ 回声洞 #{id} 发送失败，异常记录写入也失败了，请管理员检查日志。",
+        "sendFailedIgnored": "⚠️ 回声洞 #{id} 发送失败，当前配置为不额外处理。",
+        "unknownError": "未知错误",
+        "failureSummaryTitle": "📮 回声洞发送失败日报",
+        "failureSummaryContinuationTitle": "📮 回声洞发送失败日报（续）",
+        "failureSummaryRange": "统计区间：{start} ~ {end}",
+        "failureSummaryCount": "失败次数：{count}",
+        "failureSummaryCaveCount": "涉及回声洞：{count}",
+        "failureSummaryDetail": "#{caveId}（群 {channelId}）失败 {count} 次，最近 {lastFailTime}，错误：{errorMessage}"
       }
     },
     "cave.echo": {
@@ -139,6 +147,26 @@
         "mergeDone": "✅ 合并完成：处理了 {mergedRecords} 条记录，媒体复制 {mediaCopied} 个、移动 {mediaMoved} 个、上传 {mediaUploaded} 个、失败 {mediaFailed} 个。"
       }
     },
+    "cave.admin.common": {
+      "boolean": {
+        "keep": "保留",
+        "drop": "不保留"
+      },
+      "mediaType": {
+        "image": "图片",
+        "video": "视频",
+        "record": "语音",
+        "file": "文件"
+      },
+      "mediaStorage": {
+        "local": "本地",
+        "s3": "S3"
+      },
+      "emptyValue": "(空)",
+      "confirmInput": "确认",
+      "cancelInput": "取消",
+      "failedRecordSummary": "{message}\n⚠️ 失败记录 ID：{failedRecordIds}"
+    },
     "cave.admin.migrate-local-v2": {
       "description": "迁移旧本地媒体目录到 V2 分群存储格式",
       "messages": {
@@ -162,7 +190,9 @@
       "description": "检测回声洞中的媒体链接，不执行实际迁移",
       "messages": {
         "invalidRange": "❌ 范围参数格式无效。请使用 0-100,105-240 或 12,18-20 这样的格式。",
+        "allRanges": "全部",
         "noMediaFound": "🔍 在范围 {idRanges} 内未检测到任何媒体链接。",
+        "resultItem": "回声洞 #{id}\n{refs}",
         "confirmSummary": "⚠️ 即将执行媒体链接检测（只读）\n检测范围：{idRanges}\n命中回声洞数：{matchedCount}\n\n本次操作不会上传 S3、不会删除本地媒体、不会改写数据库，但会逐条发送检测结果。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次检测。",

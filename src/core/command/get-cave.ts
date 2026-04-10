@@ -1,7 +1,7 @@
 import { Config } from '../../config/config';
 import { handleCaveSendFailure } from '../send-failure';
 import { EchoCave } from '../../index';
-import { PartialCaveSendError, sendCaveMsg } from '../formatter/msg-formatter';
+import { sendCaveMsg } from '../formatter/msg-formatter';
 import { Context, Session } from 'koishi';
 
 function ensureGuildSession(session: Session): string | null {
@@ -115,12 +115,6 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
     try {
         await sendCaveMsg(ctx, session, caveMsg, cfg);
     } catch (error) {
-        if (error instanceof PartialCaveSendError) {
-            await incrementDrawCount(ctx, caveMsg);
-
-            return;
-        }
-
         return await handleCaveSendFailure(ctx, session, caveMsg, cfg, error);
     }
 

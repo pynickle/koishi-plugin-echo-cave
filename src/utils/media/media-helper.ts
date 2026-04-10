@@ -81,6 +81,11 @@ interface CaveMediaRefs {
     refs: string[];
 }
 
+interface StoredCaveMediaRecord {
+    id: number;
+    content: string;
+}
+
 class LRUCache<K, V> {
     private cache: Map<K, V>;
     private maxSize: number;
@@ -410,6 +415,18 @@ function setElementFileRef(element: MaybeMediaElement, fileRef: string): MaybeMe
             url: undefined,
         },
     };
+}
+
+function normalizeMediaRefForComparison(fileRef: string): string | null {
+    if (isFileUri(fileRef)) {
+        return normalizePathForComparison(fromFileUri(fileRef));
+    }
+
+    if (isLocalFilePath(fileRef)) {
+        return normalizePathForComparison(fileRef);
+    }
+
+    return null;
 }
 
 function getContentTypeFromHeaders(
@@ -1033,6 +1050,52 @@ async function collectMessageMediaRefs(ctx: Context, content: string): Promise<s
     return refs;
 }
 
+async function collectCavesReferencingFiles(
+    ctx: Context,
+    targetPaths: string[]
+): Promise<StoredCaveMediaRecord[]> {
+    const targetSet = new Set(targetPaths.map((filePath) => normalizePathForComparison(filePath)));
+    const caves = await ctx.database.get('echo_cave_v2', {});
+    const matched: StoredCaveMediaRecord[] = [];
+
+    for (const cave of caves) {
+        try {
+            const refs = await collectMessageMediaRefs(ctx, cave.content);
+            if (
+                refs.some((ref) => {
+                    const normalizedRef = normalizeMediaRefForComparison(ref);
+                    return normalizedRef ? targetSet.has(normalizedRef) : false;
+                })
+            ) {
+                matched.push({
+                    id: cave.id,
+                    content: cave.content,
+                });
+            }
+        } catch (error) {
+            ctx.logger.warn(`Failed to inspect cave #${cave.id} during media cleanup: ${error}`);
+        }
+    }
+
+    return matched;
+}
+
+async function deleteCavesForOversizedMedia(
+    ctx: Context,
+    caves: StoredCaveMediaRecord[],
+    cfg: Config
+) {
+    for (const cave of caves) {
+        try {
+            await deleteMediaFilesFromMessage(ctx, cave.content, cfg);
+            await ctx.database.remove('echo_cave_v2', cave.id);
+            ctx.logger.info(`Deleted cave #${cave.id} because its media exceeded the size limit.`);
+        } catch (error) {
+            ctx.logger.warn(`Failed to delete cave #${cave.id} during oversized media cleanup: ${error}`);
+        }
+    }
+}
+
 export async function inspectCaveMediaRefs(
     ctx: Context,
     shouldInclude?: (caveId: number) => boolean
@@ -1483,7 +1546,21 @@ export async function checkAndCleanMediaFiles(ctx: Context, cfg: Config, type: M
             currentSize -= file.size;
         }
 
+        if (cfg.oversizedMediaCleanupMode === 'delete-cave') {
+            const cavesToDelete = await collectCavesReferencingFiles(
+                ctx,
+                filesToDelete.map((file) => file.path)
+            );
+            await deleteCavesForOversizedMedia(ctx, cavesToDelete, cfg);
+        }
+
         for (const file of filesToDelete) {
+            try {
+                await fs.stat(file.path);
+            } catch {
+                continue;
+            }
+
             try {
                 await fs.unlink(file.path);
                 base64Cache.delete(file.path);

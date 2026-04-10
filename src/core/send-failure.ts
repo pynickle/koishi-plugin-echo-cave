@@ -28,12 +28,12 @@ export async function handleCaveSendFailure(
     error: unknown
 ): Promise<string> {
     const handlingMode = cfg.sendFailureHandlingMode || 'ignore';
-    const errorMessage = normalizeErrorMessage(error);
+    const errorMessage = normalizeErrorMessage(ctx, error);
 
     ctx.logger.warn(`Failed to send cave #${caveMsg.id} in ${session.channelId}: ${errorMessage}`);
 
     if (handlingMode === 'auto-delete') {
-        return handleAutoDeleteOnFailure(ctx, session, caveMsg, cfg, errorMessage);
+        return handleAutoDeleteOnFailure(ctx, session, caveMsg, cfg);
     }
 
     if (handlingMode === 'daily-report') {
@@ -42,7 +42,6 @@ export async function handleCaveSendFailure(
 
     return session.text('commands.cave.messages.sendFailedIgnored', {
         id: caveMsg.id,
-        errorMessage,
     });
 }
 
@@ -61,23 +60,19 @@ async function handleAutoDeleteOnFailure(
     session: Session,
     caveMsg: EchoCave,
     cfg: Config,
-    errorMessage: string
 ): Promise<string> {
     try {
         await deleteStoredCave(ctx, cfg, caveMsg);
         return session.text('commands.cave.messages.sendFailedAutoDeleted', {
             id: caveMsg.id,
-            errorMessage,
         });
     } catch (deleteError) {
-        const deleteErrorMessage = normalizeErrorMessage(deleteError);
+        const deleteErrorMessage = normalizeErrorMessage(ctx, deleteError);
         ctx.logger.error(
             `Failed to auto-delete cave #${caveMsg.id} after send failure: ${deleteErrorMessage}`
         );
         return session.text('commands.cave.messages.sendFailedAutoDeleteAlsoFailed', {
             id: caveMsg.id,
-            errorMessage,
-            deleteErrorMessage,
         });
     }
 }
@@ -102,27 +97,23 @@ async function handleDailyReportOnFailure(
             errorMessage,
         });
     } catch (recordError) {
-        const recordErrorMessage = normalizeErrorMessage(recordError);
+        const recordErrorMessage = normalizeErrorMessage(ctx, recordError);
         ctx.logger.error(`Failed to record cave send failure for #${caveMsg.id}: ${recordErrorMessage}`);
         return session.text('commands.cave.messages.sendFailedReportRecordFailed', {
             id: caveMsg.id,
-            errorMessage,
         });
     }
 
     if (!summaryAdminId) {
         return session.text('commands.cave.messages.sendFailedRecordedWithoutAdmin', {
             id: caveMsg.id,
-            errorMessage,
             summaryTime: cfg.sendFailureSummaryTime || DEFAULT_SUMMARY_TIME,
         });
     }
 
     return session.text('commands.cave.messages.sendFailedRecordedForDailyReport', {
         id: caveMsg.id,
-        errorMessage,
         summaryTime: cfg.sendFailureSummaryTime || DEFAULT_SUMMARY_TIME,
-        adminId: summaryAdminId,
     });
 }
 
@@ -140,7 +131,7 @@ function scheduleNextSendFailureSummary(ctx: Context, cfg: Config) {
         try {
             await flushSendFailureSummary(ctx, cfg);
         } catch (error) {
-            ctx.logger.error(`Failed to flush cave send failure summary: ${normalizeErrorMessage(error)}`);
+            ctx.logger.error(`Failed to flush cave send failure summary: ${normalizeErrorMessage(ctx, error)}`);
         }
 
         scheduleNextSendFailureSummary(ctx, cfg);
@@ -168,7 +159,7 @@ async function flushSendFailureSummary(ctx: Context, cfg: Config) {
             continue;
         }
 
-        const messages = buildSummaryMessages(entries);
+        const messages = buildSummaryMessages(ctx, entries);
 
         try {
             for (const message of messages) {
@@ -176,7 +167,7 @@ async function flushSendFailureSummary(ctx: Context, cfg: Config) {
             }
         } catch (error) {
             ctx.logger.error(
-                `Failed to deliver cave send failure summary through bot ${botKey}: ${normalizeErrorMessage(error)}`
+                `Failed to deliver cave send failure summary through bot ${botKey}: ${normalizeErrorMessage(ctx, error)}`
             );
             continue;
         }
@@ -187,7 +178,7 @@ async function flushSendFailureSummary(ctx: Context, cfg: Config) {
             }
         } catch (error) {
             ctx.logger.error(
-                `Delivered cave send failure summary through bot ${botKey}, but cleanup failed: ${normalizeErrorMessage(error)}`
+                `Delivered cave send failure summary through bot ${botKey}, but cleanup failed: ${normalizeErrorMessage(ctx, error)}`
             );
         }
     }
@@ -206,27 +197,36 @@ function groupFailuresByBot(failures: EchoCaveSendFailure[]) {
     return groupedFailures;
 }
 
-function buildSummaryMessages(entries: EchoCaveSendFailure[]): string[] {
+function buildSummaryMessages(ctx: Context, entries: EchoCaveSendFailure[]): string[] {
     const sortedEntries = [...entries].sort((left, right) => {
         return new Date(left.failTime).getTime() - new Date(right.failTime).getTime();
     });
     const summaryItems = summarizeFailures(sortedEntries);
     const headerLines = [
-        '📮 回声洞发送失败日报',
-        `统计区间：${formatDateTime(sortedEntries[0].failTime)} ~ ${formatDateTime(
-            sortedEntries.at(-1)!.failTime
-        )}`,
-        `失败次数：${sortedEntries.length}`,
-        `涉及回声洞：${summaryItems.length}`,
+        renderLocaleText(ctx, 'commands.cave.messages.failureSummaryTitle'),
+        renderLocaleText(ctx, 'commands.cave.messages.failureSummaryRange', {
+            start: formatDateTime(sortedEntries[0].failTime),
+            end: formatDateTime(sortedEntries.at(-1)!.failTime),
+        }),
+        renderLocaleText(ctx, 'commands.cave.messages.failureSummaryCount', {
+            count: sortedEntries.length,
+        }),
+        renderLocaleText(ctx, 'commands.cave.messages.failureSummaryCaveCount', {
+            count: summaryItems.length,
+        }),
         '',
     ];
     const detailLines = summaryItems.map((item) => {
-        return `#${item.caveId}（群 ${item.channelId}）失败 ${item.count} 次，最近 ${formatDateTime(
-            item.lastFailTime
-        )}，错误：${item.lastErrorMessage}`;
+        return renderLocaleText(ctx, 'commands.cave.messages.failureSummaryDetail', {
+            caveId: item.caveId,
+            channelId: item.channelId,
+            count: item.count,
+            lastFailTime: formatDateTime(item.lastFailTime),
+            errorMessage: item.lastErrorMessage,
+        });
     });
 
-    return splitLinesIntoMessages(headerLines, detailLines, MAX_MESSAGE_LENGTH);
+    return splitLinesIntoMessages(ctx, headerLines, detailLines, MAX_MESSAGE_LENGTH);
 }
 
 function summarizeFailures(entries: EchoCaveSendFailure[]): FailureSummaryItem[] {
@@ -261,7 +261,12 @@ function summarizeFailures(entries: EchoCaveSendFailure[]): FailureSummaryItem[]
     });
 }
 
-function splitLinesIntoMessages(headerLines: string[], detailLines: string[], maxLength: number): string[] {
+function splitLinesIntoMessages(
+    ctx: Context,
+    headerLines: string[],
+    detailLines: string[],
+    maxLength: number
+): string[] {
     const messages: string[] = [];
     let current = headerLines.join('\n');
 
@@ -273,7 +278,7 @@ function splitLinesIntoMessages(headerLines: string[], detailLines: string[], ma
         }
 
         messages.push(current);
-        current = `📮 回声洞发送失败日报（续）\n${line}`;
+        current = `${renderLocaleText(ctx, 'commands.cave.messages.failureSummaryContinuationTitle')}\n${line}`;
     }
 
     if (current) {
@@ -312,7 +317,7 @@ function getDelayUntilNextRun(summaryTime: SummaryTime): number {
     return nextRun.getTime() - now.getTime();
 }
 
-function normalizeErrorMessage(error: unknown): string {
+function normalizeErrorMessage(ctx: Context, error: unknown): string {
     if (error instanceof Error) {
         return error.message.slice(0, MAX_ERROR_MESSAGE_LENGTH);
     }
@@ -321,7 +326,12 @@ function normalizeErrorMessage(error: unknown): string {
         return error.slice(0, MAX_ERROR_MESSAGE_LENGTH);
     }
 
-    return '未知错误';
+    return renderLocaleText(ctx, 'commands.cave.messages.unknownError');
+}
+
+function renderLocaleText(ctx: Context, path: string, params: Record<string, unknown> = {}): string {
+    const locales = [...(ctx.root.config.i18n?.locales || []), 'zh-CN'];
+    return ctx.i18n.render(locales, [path], params).join('');
 }
 
 function formatDateTime(date: Date): string {

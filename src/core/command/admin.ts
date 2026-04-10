@@ -54,29 +54,54 @@ function parseBooleanOption(value: string | undefined, defaultValue: boolean): b
     }
 }
 
-function toChineseBooleanLabel(value: boolean): string {
-    return value ? '保留' : '不保留';
+function getBooleanLabel(session: Session, value: boolean): string {
+    return session.text(
+        value ? 'commands.cave.admin.common.boolean.keep' : 'commands.cave.admin.common.boolean.drop'
+    );
 }
 
-function toChineseMediaTypeLabel(type: MediaType): string {
+function getMediaTypeLabel(session: Session, type: MediaType): string {
     switch (type) {
         case 'image':
-            return '图片';
+            return session.text('commands.cave.admin.common.mediaType.image');
         case 'video':
-            return '视频';
+            return session.text('commands.cave.admin.common.mediaType.video');
         case 'record':
-            return '语音';
+            return session.text('commands.cave.admin.common.mediaType.record');
         default:
-            return '文件';
+            return session.text('commands.cave.admin.common.mediaType.file');
     }
 }
 
-function appendFailedRecordSummary(message: string, failedRecordIds?: number[]): string {
+function getMediaStorageLabel(session: Session, storage: string): string {
+    return session.text(
+        storage === 's3'
+            ? 'commands.cave.admin.common.mediaStorage.s3'
+            : 'commands.cave.admin.common.mediaStorage.local'
+    );
+}
+
+function getEmptyValueLabel(session: Session): string {
+    return session.text('commands.cave.admin.common.emptyValue');
+}
+
+function appendFailedRecordSummary(
+    session: Session,
+    message: string,
+    failedRecordIds?: number[]
+): string {
     if (!failedRecordIds || failedRecordIds.length === 0) {
         return message;
     }
 
-    return `${message}\n⚠️ 失败记录 ID：${failedRecordIds.join(', ')}`;
+    return session.text('commands.cave.admin.common.failedRecordSummary', {
+        message,
+        failedRecordIds: failedRecordIds.join(', '),
+    });
+}
+
+function getAllRangesLabel(session: Session): string {
+    return session.text('commands.cave.admin.inspect-media.messages.allRanges');
 }
 
 function parseIdRanges(value: string | undefined): IdRange[] | null {
@@ -134,6 +159,9 @@ async function requestSecondConfirmation(
     timeoutMessage: string,
     cancelledMessage: string
 ): Promise<boolean> {
+    const confirmInput = session.text('commands.cave.admin.common.confirmInput');
+    const cancelInput = session.text('commands.cave.admin.common.cancelInput');
+
     return new Promise<boolean>((resolve) => {
         listenForUserMessage(
             ctx,
@@ -143,12 +171,12 @@ async function requestSecondConfirmation(
             async (message) => {
                 const normalized = message.trim();
 
-                if (normalized === '确认') {
+                if (normalized === confirmInput) {
                     resolve(true);
                     return false;
                 }
 
-                if (normalized === '取消') {
+                if (normalized === cancelInput) {
                     await session.send(cancelledMessage);
                     resolve(false);
                     return false;
@@ -201,7 +229,7 @@ export async function mergeCavesBetweenChannels(
             targetChannelId,
             sourceCount: sourceCaves.length,
             targetCount: targetCaves.length,
-            keepSource: toChineseBooleanLabel(keepSource),
+            keepSource: getBooleanLabel(session, keepSource),
         }),
         session.text('commands.cave.admin.merge.messages.confirmRetry'),
         session.text('commands.cave.admin.merge.messages.confirmTimeout'),
@@ -214,8 +242,9 @@ export async function mergeCavesBetweenChannels(
 
     const result = await mergeChannelCaves(ctx, cfg, sourceChannelId, targetChannelId, keepSource);
     return appendFailedRecordSummary(
+        session,
         session.text('commands.cave.admin.merge.messages.mergeDone', result),
-        result.failedRecordIds
+        result.failedRecordIds,
     );
 }
 
@@ -227,8 +256,9 @@ export async function migrateLegacyLocalMedia(ctx: Context, session: Session, cf
 
     const result = await migrateLocalMediaToV2(ctx, cfg);
     return appendFailedRecordSummary(
+        session,
         session.text('commands.cave.admin.migrate-local-v2.messages.migrateDone', result),
-        result.failedRecordIds
+        result.failedRecordIds,
     );
 }
 
@@ -256,10 +286,10 @@ export async function migrateMediaToS3(
         ctx,
         session,
         session.text('commands.cave.admin.migrate-s3.messages.confirmSummary', {
-            mediaStorage: cfg.mediaStorage || 'local',
+            mediaStorage: getMediaStorageLabel(session, cfg.mediaStorage || 'local'),
             bucket: cfg.s3Bucket,
-            prefix: cfg.s3PathPrefix || '(空)',
-            keepLocal: toChineseBooleanLabel(keepLocal),
+            prefix: cfg.s3PathPrefix || getEmptyValueLabel(session),
+            keepLocal: getBooleanLabel(session, keepLocal),
         }),
         session.text('commands.cave.admin.migrate-s3.messages.confirmRetry'),
         session.text('commands.cave.admin.migrate-s3.messages.confirmTimeout'),
@@ -281,7 +311,7 @@ export async function migrateMediaToS3(
                     await session.send(
                         session.text('commands.cave.admin.migrate-s3.messages.itemUploaded', {
                             caveId,
-                            mediaType: toChineseMediaTypeLabel(mediaType),
+                            mediaType: getMediaTypeLabel(session, mediaType),
                         })
                     );
                 }
@@ -289,8 +319,9 @@ export async function migrateMediaToS3(
         };
     });
     return appendFailedRecordSummary(
+        session,
         session.text('commands.cave.admin.migrate-s3.messages.migrateDone', result),
-        result.failedRecordIds
+        result.failedRecordIds,
     );
 }
 
@@ -310,7 +341,7 @@ export async function inspectMediaRefsForMigration(
         return session.text('commands.cave.admin.inspect-media.messages.invalidRange');
     }
 
-    const displayRanges = idRangesOption?.trim() || '全部';
+    const displayRanges = idRangesOption?.trim() || getAllRangesLabel(session);
     const results = await inspectCaveMediaRefs(ctx, (id) => isIdInRanges(id, idRanges));
     if (results.length === 0) {
         return session.text('commands.cave.admin.inspect-media.messages.noMediaFound', {
@@ -335,6 +366,11 @@ export async function inspectMediaRefsForMigration(
     }
 
     for (const { id, refs } of results) {
-        await session.send(`回声洞 #${id}\n${refs.join('\n')}`);
+        await session.send(
+            session.text('commands.cave.admin.inspect-media.messages.resultItem', {
+                id,
+                refs: refs.join('\n'),
+            })
+        );
     }
 }

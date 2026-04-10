@@ -106,12 +106,10 @@ export async function sendCaveMsg(
                 await session.onebot.sendGroupForwardMsg(channelId, content);
             }
         } catch (error) {
-            try {
-                await session.send(session.text('commands.cave.messages.sendPartialFailure'));
-            } catch {
-            }
-
-            const message = error instanceof Error ? error.message : '回声洞正文发送失败';
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : session.text('commands.cave.messages.sendBodyFailed');
             throw new PartialCaveSendError(message);
         }
 

@@ -2,6 +2,7 @@ import zhCN from './locales/zh-CN.json';
 import { Schema } from 'koishi';
 
 export type SendFailureHandlingMode = 'auto-delete' | 'daily-report' | 'ignore';
+export type OversizedMediaCleanupMode = 'delete-cave' | 'keep-cave';
 
 export interface Config {
     adminMessageProtection?: boolean;
@@ -32,6 +33,7 @@ export interface Config {
     sendFailureHandlingMode?: SendFailureHandlingMode;
     sendFailureSummaryAdminId?: string;
     sendFailureSummaryTime?: string;
+    oversizedMediaCleanupMode?: OversizedMediaCleanupMode;
 }
 
 export const Config: Schema<Config> = Schema.intersect([
@@ -52,10 +54,11 @@ export const Config: Schema<Config> = Schema.intersect([
         deleteMediaWhenDeletingMsg: Schema.boolean().default(true),
         useBase64ForMedia: Schema.boolean().default(false),
         enableSizeLimit: Schema.boolean().default(false),
-        maxImageSize: Schema.number().default(2048),
-        maxVideoSize: Schema.number().default(512),
-        maxFileSize: Schema.number().default(512),
-        maxRecordSize: Schema.number().default(512),
+        maxImageSize: Schema.number().default(20480),
+        maxVideoSize: Schema.number().default(5120),
+        maxFileSize: Schema.number().default(5120),
+        maxRecordSize: Schema.number().default(5120),
+        oversizedMediaCleanupMode: Schema.union(['keep-cave', 'delete-cave']).default('keep-cave'),
     }).description('媒体处理'),
     Schema.object({
         mediaStorage: Schema.union(['local', 's3']).default('local'),
