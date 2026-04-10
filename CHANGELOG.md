@@ -1,3 +1,9 @@
+## [1.29.8](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.7...v1.29.8) (2026-04-10)
+
+### 🚀 Improvements
+
+* improve failure process ([6aa0a48](https://github.com/pynickle/koishi-plugin-echo-cave/commit/6aa0a480c09db095d1d26bea9b35cf82994b35d6))
+
 ## [1.29.7](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.6...v1.29.7) (2026-04-09)
 
 ### 🔧 Miscellaneous Changes
