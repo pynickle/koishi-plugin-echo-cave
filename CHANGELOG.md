@@ -1,3 +1,9 @@
+## [1.29.10](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.9...v1.29.10) (2026-04-12)
+
+### 🐛 Bug Fixes
+
+* fix reindex error ([2e89b0e](https://github.com/pynickle/koishi-plugin-echo-cave/commit/2e89b0ef9eb33be14e5094f7aa908fd9f015cd6f))
+
 ## [1.29.9](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.8...v1.29.9) (2026-04-12)
 
 ### 🚀 Improvements
