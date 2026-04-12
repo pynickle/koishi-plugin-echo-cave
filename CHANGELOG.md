@@ -1,3 +1,9 @@
+## [1.29.9](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.8...v1.29.9) (2026-04-12)
+
+### 🚀 Improvements
+
+* improve binding ([0cbac09](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0cbac09df0f0bea64b80dabf64abf5e118b46bb5))
+
 ## [1.29.8](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.7...v1.29.8) (2026-04-10)
 
 ### 🚀 Improvements
