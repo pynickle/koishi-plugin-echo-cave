@@ -32,6 +32,151 @@ interface ReindexBackupPayload {
     mapping: ReindexPlanItem[];
 }
 
+function cloneCaveRecord(cave: EchoCave, id: number): EchoCave {
+    return {
+        ...cave,
+        createTime: new Date(cave.createTime),
+        id,
+        relatedUsers: [...cave.relatedUsers],
+    };
+}
+
+function getCaveIdList(caves: EchoCave[]): number[] {
+    return caves.map((cave) => cave.id);
+}
+
+async function removeCavesByIds(ctx: Context, ids: number[]) {
+    for (const id of ids) {
+        await ctx.database.remove('echo_cave_v2', id);
+    }
+}
+
+async function upsertCaves(ctx: Context, caves: EchoCave[]) {
+    if (caves.length === 0) {
+        return;
+    }
+
+    await ctx.database.upsert('echo_cave_v2', caves);
+}
+
+function buildTemporarySnapshot(currentCaves: EchoCave[], nextCaves: EchoCave[]) {
+    const currentMaxId = currentCaves.reduce((currentMax, cave) => Math.max(currentMax, cave.id), 0);
+    const nextMaxId = nextCaves.reduce((currentMax, cave) => Math.max(currentMax, cave.id), 0);
+    const offset = Math.max(currentMaxId, nextMaxId) + currentCaves.length + nextCaves.length + REINDEX_SPECIAL_OFFSET;
+
+    return currentCaves.map((cave) => cloneCaveRecord(cave, cave.id + offset));
+}
+
+async function rollbackCaveReplacement(
+    ctx: Context,
+    currentCaves: EchoCave[],
+    nextCaves: EchoCave[],
+    tempCaves: EchoCave[]
+) {
+    const idsToRemove = [...new Set([...getCaveIdList(nextCaves), ...getCaveIdList(tempCaves)])];
+
+    await removeCavesByIds(ctx, idsToRemove);
+    await upsertCaves(ctx, currentCaves);
+}
+
+async function replaceCaveSnapshot(ctx: Context, currentCaves: EchoCave[], nextCaves: EchoCave[]) {
+    const tempCaves = buildTemporarySnapshot(currentCaves, nextCaves);
+
+    try {
+        await upsertCaves(ctx, tempCaves);
+        await removeCavesByIds(ctx, getCaveIdList(currentCaves));
+        await upsertCaves(ctx, nextCaves);
+        await removeCavesByIds(ctx, getCaveIdList(tempCaves));
+    } catch (error) {
+        await rollbackCaveReplacement(ctx, currentCaves, nextCaves, tempCaves);
+        throw error;
+    }
+}
+
+function buildSequentialCaveSnapshot(caves: EchoCave[]) {
+    return [...caves]
+        .sort((a, b) => a.id - b.id)
+        .map((cave, index) => cloneCaveRecord(cave, index + 1));
+}
+
+function normalizeCaveRecord(cave: EchoCave) {
+    return {
+        channelId: cave.channelId,
+        content: cave.content,
+        createTime: new Date(cave.createTime).toISOString(),
+        drawCount: cave.drawCount,
+        id: cave.id,
+        originUserId: cave.originUserId,
+        relatedUsers: [...cave.relatedUsers],
+        type: cave.type,
+        userId: cave.userId,
+    };
+}
+
+function isRecordObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
+function isEchoCaveRecord(value: unknown): value is EchoCave {
+    if (!isRecordObject(value)) {
+        return false;
+    }
+
+    return (
+        typeof value.id === 'number' &&
+        typeof value.channelId === 'string' &&
+        (value.createTime instanceof Date || typeof value.createTime === 'string' || typeof value.createTime === 'number') &&
+        typeof value.userId === 'string' &&
+        typeof value.originUserId === 'string' &&
+        (value.type === 'forward' || value.type === 'msg') &&
+        typeof value.content === 'string' &&
+        Array.isArray(value.relatedUsers) &&
+        value.relatedUsers.every((user) => typeof user === 'string') &&
+        typeof value.drawCount === 'number'
+    );
+}
+
+function isReindexPlanItem(value: unknown): value is ReindexPlanItem {
+    if (!isRecordObject(value)) {
+        return false;
+    }
+
+    return (
+        typeof value.oldId === 'number' &&
+        typeof value.newId === 'number' &&
+        typeof value.tempId === 'number'
+    );
+}
+
+function parseReindexBackupPayload(content: string): ReindexBackupPayload {
+    const parsed = JSON.parse(content) as unknown;
+    if (!isRecordObject(parsed)) {
+        throw new Error('invalid_backup_payload');
+    }
+
+    if (typeof parsed.createdAt !== 'string') {
+        throw new Error('invalid_backup_created_at');
+    }
+
+    if (!Array.isArray(parsed.records) || !parsed.records.every((record) => isEchoCaveRecord(record))) {
+        throw new Error('invalid_backup_records');
+    }
+
+    if (!Array.isArray(parsed.mapping) || !parsed.mapping.every((item) => isReindexPlanItem(item))) {
+        throw new Error('invalid_backup_mapping');
+    }
+
+    return {
+        createdAt: parsed.createdAt,
+        mapping: parsed.mapping,
+        records: parsed.records.map((record) => cloneCaveRecord(record, record.id)),
+    };
+}
+
+function resolveBackupPath(backupPath: string) {
+    return path.isAbsolute(backupPath) ? backupPath : path.resolve(process.cwd(), backupPath);
+}
+
 export function getCaveMaintenanceMessage(session: Session): string | null {
     return caveMaintenanceLock ? session.text('echo-cave.general.maintenanceLocked') : null;
 }
@@ -440,76 +585,45 @@ async function writeReindexBackup(
     return backupPath;
 }
 
-async function applyReindexPlan(ctx: Context, plan: ReindexPlanItem[]) {
-    const descendingPlan = [...plan].sort((a, b) => b.oldId - a.oldId);
-    for (const item of descendingPlan) {
-        if (item.oldId === item.newId) {
-            continue;
-        }
-
-        await ctx.database.set('echo_cave_v2', { id: item.oldId }, { id: item.tempId });
-    }
-
-    const ascendingPlan = [...plan].sort((a, b) => a.newId - b.newId);
-    for (const item of ascendingPlan) {
-        if (item.oldId === item.newId) {
-            continue;
-        }
-
-        await ctx.database.set('echo_cave_v2', { id: item.tempId }, { id: item.newId });
-    }
+async function applyReindexPlan(ctx: Context, originalCaves: EchoCave[]) {
+    const reindexedCaves = buildSequentialCaveSnapshot(originalCaves);
+    await replaceCaveSnapshot(ctx, originalCaves, reindexedCaves);
 }
 
-async function verifyReindexPlan(ctx: Context, originalCaves: EchoCave[]) {
-    const reindexedCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+async function verifyCaveSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
+    const actualCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+    const normalizedExpected = [...expectedCaves].sort((a, b) => a.id - b.id).map(normalizeCaveRecord);
+    const normalizedActual = actualCaves.map(normalizeCaveRecord);
 
-    if (reindexedCaves.length !== originalCaves.length) {
+    if (normalizedActual.length !== normalizedExpected.length) {
         throw new Error('record_count_mismatch');
     }
 
-    const normalizedOriginal = [...originalCaves]
-        .sort((a, b) => a.id - b.id)
-        .map((cave) => ({
-            channelId: cave.channelId,
-            content: cave.content,
-            createTime: new Date(cave.createTime).toISOString(),
-            drawCount: cave.drawCount,
-            originUserId: cave.originUserId,
-            relatedUsers: [...cave.relatedUsers],
-            type: cave.type,
-            userId: cave.userId,
-        }));
-    const normalizedReindexed = reindexedCaves.map((cave, index) => ({
-        channelId: cave.channelId,
-        content: cave.content,
-        createTime: new Date(cave.createTime).toISOString(),
-        drawCount: cave.drawCount,
-        id: cave.id,
-        originUserId: cave.originUserId,
-        relatedUsers: [...cave.relatedUsers],
-        type: cave.type,
-        userId: cave.userId,
-        expectedId: index + 1,
-    }));
+    for (let index = 0; index < normalizedActual.length; index++) {
+        const actual = normalizedActual[index];
+        const expected = normalizedExpected[index];
 
-    for (let index = 0; index < normalizedReindexed.length; index++) {
-        const reindexed = normalizedReindexed[index];
-        const original = normalizedOriginal[index];
-
-        if (reindexed.id !== reindexed.expectedId) {
+        if (actual.id !== index + 1) {
             throw new Error('id_sequence_mismatch');
         }
 
-        if (
-            reindexed.channelId !== original.channelId ||
-            reindexed.content !== original.content ||
-            reindexed.createTime !== original.createTime ||
-            reindexed.drawCount !== original.drawCount ||
-            reindexed.originUserId !== original.originUserId ||
-            reindexed.relatedUsers.join(',') !== original.relatedUsers.join(',') ||
-            reindexed.type !== original.type ||
-            reindexed.userId !== original.userId
-        ) {
+        if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+            throw new Error('record_content_mismatch');
+        }
+    }
+}
+
+async function verifyRestoredSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
+    const actualCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+    const normalizedExpected = [...expectedCaves].sort((a, b) => a.id - b.id).map(normalizeCaveRecord);
+    const normalizedActual = actualCaves.map(normalizeCaveRecord);
+
+    if (normalizedActual.length !== normalizedExpected.length) {
+        throw new Error('record_count_mismatch');
+    }
+
+    for (let index = 0; index < normalizedActual.length; index++) {
+        if (JSON.stringify(normalizedActual[index]) !== JSON.stringify(normalizedExpected[index])) {
             throw new Error('record_content_mismatch');
         }
     }
@@ -568,8 +682,9 @@ export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config
 
     setCaveMaintenanceLock(true);
     try {
-        await applyReindexPlan(ctx, plan);
-        await verifyReindexPlan(ctx, caves);
+        const reindexedCaves = buildSequentialCaveSnapshot(caves);
+        await applyReindexPlan(ctx, caves);
+        await verifyCaveSnapshot(ctx, reindexedCaves);
         return session.text('commands.cave.admin.reindex.messages.reindexDone', {
             caveCount: caves.length,
             backupPath,
@@ -577,6 +692,73 @@ export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config
     } catch (error) {
         ctx.logger.error(`Failed to reindex cave ids: ${error}`);
         return session.text('commands.cave.admin.reindex.messages.reindexFailed', {
+            backupPath,
+            error: error instanceof Error ? error.message : String(error),
+        });
+    } finally {
+        setCaveMaintenanceLock(false);
+    }
+}
+
+export async function restoreReindexBackup(
+    ctx: Context,
+    session: Session,
+    cfg: Config,
+    backupPathInput?: string
+) {
+    const accessError = ensureAdminPrivateAccess(session, cfg);
+    if (accessError) {
+        return accessError;
+    }
+
+    if (!backupPathInput?.trim()) {
+        return session.text('commands.cave.admin.restore-reindex.messages.missingBackupPath');
+    }
+
+    const backupPath = resolveBackupPath(backupPathInput.trim());
+
+    let backup: ReindexBackupPayload;
+    try {
+        const content = await fs.readFile(backupPath, 'utf8');
+        backup = parseReindexBackupPayload(content);
+    } catch (error) {
+        ctx.logger.error(`Failed to read cave reindex backup: ${error}`);
+        return session.text('commands.cave.admin.restore-reindex.messages.backupReadFailed', {
+            backupPath,
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+
+    const currentCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+    const confirmed = await requestSecondConfirmation(
+        ctx,
+        session,
+        session.text('commands.cave.admin.restore-reindex.messages.confirmSummary', {
+            backupPath,
+            currentCount: currentCaves.length,
+            backupCount: backup.records.length,
+            backupCreatedAt: backup.createdAt,
+        }),
+        session.text('commands.cave.admin.restore-reindex.messages.confirmRetry'),
+        session.text('commands.cave.admin.restore-reindex.messages.confirmTimeout'),
+        session.text('commands.cave.admin.restore-reindex.messages.confirmCancelled')
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setCaveMaintenanceLock(true);
+    try {
+        await replaceCaveSnapshot(ctx, currentCaves, backup.records);
+        await verifyRestoredSnapshot(ctx, backup.records);
+        return session.text('commands.cave.admin.restore-reindex.messages.restoreDone', {
+            backupPath,
+            caveCount: backup.records.length,
+        });
+    } catch (error) {
+        ctx.logger.error(`Failed to restore cave reindex backup: ${error}`);
+        return session.text('commands.cave.admin.restore-reindex.messages.restoreFailed', {
             backupPath,
             error: error instanceof Error ? error.message : String(error),
         });

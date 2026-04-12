@@ -6,6 +6,7 @@ import {
     migrateLegacyLocalMedia,
     migrateMediaToS3,
     reindexCaveIds,
+    restoreReindexBackup,
 } from './core/command/admin';
 import { deleteCave, deleteCaves } from './core/command/delete-cave';
 import { getCave, getCaveListByOriginUser, getCaveListByUser } from './core/command/get-cave';
@@ -209,6 +210,10 @@ export function apply(ctx: Context, cfg: Config) {
 
     ctx.command('cave.admin.reindex').action(
         async ({ session }) => await reindexCaveIds(ctx, session, cfg)
+    );
+
+    ctx.command('cave.admin.restore-reindex <backupPath:text>').action(
+        async ({ session }, backupPath) => await restoreReindexBackup(ctx, session, cfg, backupPath)
     );
 
     registerSendFailureSummaryScheduler(ctx, cfg);

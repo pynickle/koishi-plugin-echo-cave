@@ -218,7 +218,20 @@
         "confirmCancelled": "🛑 已取消本次回声洞 ID 重排。",
         "confirmTimeout": "⌛ 二次确认超时，回声洞 ID 重排未执行。",
         "reindexDone": "✅ 回声洞 ID 重排完成，共处理 {caveCount} 条记录。备份文件：{backupPath}",
-        "reindexFailed": "❌ 回声洞 ID 重排失败，已停止继续写入。请根据备份文件检查并恢复：{backupPath}\n错误：{error}"
+        "reindexFailed": "❌ 回声洞 ID 重排失败，已停止继续写入。可使用 cave.admin.restore-reindex 恢复备份：{backupPath}\n错误：{error}"
+      }
+    },
+    "cave.admin.restore-reindex": {
+      "description": "从回声洞 ID 重排生成的 JSON 备份恢复数据库",
+      "messages": {
+        "missingBackupPath": "❌ 请提供要恢复的备份文件路径。",
+        "backupReadFailed": "❌ 读取回声洞重排备份失败：{backupPath}\n错误：{error}",
+        "confirmSummary": "⚠️ 即将从备份恢复回声洞数据\n备份文件：{backupPath}\n备份创建时间：{backupCreatedAt}\n备份记录数：{backupCount}\n当前数据库记录数：{currentCount}\n\n本次操作会先临时腾挪当前记录，再按备份内容完整恢复。执行期间会临时锁定回声洞相关命令。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
+        "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
+        "confirmCancelled": "🛑 已取消本次回声洞备份恢复。",
+        "confirmTimeout": "⌛ 二次确认超时，回声洞备份恢复未执行。",
+        "restoreDone": "✅ 回声洞备份恢复完成，共恢复 {caveCount} 条记录。备份文件：{backupPath}",
+        "restoreFailed": "❌ 回声洞备份恢复失败，已尝试回滚到恢复前状态：{backupPath}\n错误：{error}"
       }
     }
   }
