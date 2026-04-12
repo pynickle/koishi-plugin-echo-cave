@@ -1,6 +1,7 @@
 import { getUserName } from '../../adapters/onebot/user';
 import { Config } from '../../config/config';
 import { EchoCave } from '../../index';
+import { getCaveMaintenanceMessage } from './admin';
 import { createTextMsgNode } from '../../utils/msg/cqcode-helper';
 import { Context, Session } from 'koishi';
 
@@ -196,6 +197,12 @@ export async function getRanking(
 ): Promise<void> {
     if (!session.guildId) {
         await session.send(session.text('echo-cave.general.privateChatReminder'));
+        return;
+    }
+
+    const maintenanceMessage = getCaveMaintenanceMessage(session);
+    if (maintenanceMessage) {
+        await session.send(maintenanceMessage);
         return;
     }
 

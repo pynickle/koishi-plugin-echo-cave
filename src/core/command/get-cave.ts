@@ -1,6 +1,9 @@
 import { Config } from '../../config/config';
+import { checkUsersInGroup } from '../../adapters/onebot/user';
 import { handleCaveSendFailure } from '../send-failure';
 import { EchoCave } from '../../index';
+import { parseUserIds } from '../../utils/msg/element-helper';
+import { getCaveMaintenanceMessage } from './admin';
 import { sendCaveMsg } from '../formatter/msg-formatter';
 import { Context, Session } from 'koishi';
 
@@ -21,6 +24,11 @@ async function getCaveIdsByField(
     const guildAccessError = ensureGuildSession(session);
     if (guildAccessError) {
         return session.text(guildAccessError);
+    }
+
+    const maintenanceMessage = getCaveMaintenanceMessage(session);
+    if (maintenanceMessage) {
+        return maintenanceMessage;
     }
 
     const caves = await ctx.database.get(
@@ -60,17 +68,68 @@ export async function getCaveListByOriginUser(ctx: Context, session: Session) {
     return await getCaveIdsByField(ctx, session, 'originUserId', '.noMsgTraced');
 }
 
-export async function getCave(ctx: Context, session: Session, cfg: Config, id: number) {
+function selectRandomCave(caves: EchoCave[]) {
+    return caves[Math.floor(Math.random() * caves.length)];
+}
+
+function selectWeightedRandomCave(caves: EchoCave[], alpha: number) {
+    const weights = caves.map((cave) => 1 / (1 + cave.drawCount * alpha));
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+    let random = Math.random() * totalWeight;
+    let selectedIndex = 0;
+    while (random > weights[selectedIndex]) {
+        random -= weights[selectedIndex];
+        selectedIndex++;
+    }
+
+    return caves[selectedIndex];
+}
+
+async function getTargetedUserCave(
+    ctx: Context,
+    session: Session,
+    targetUserId: string
+): Promise<EchoCave | null | string> {
+    const isUserInGroup = await checkUsersInGroup(ctx, session, [targetUserId]);
+    if (!isUserInGroup) {
+        return session.text('echo-cave.user.userNotInGroup');
+    }
+
+    const caves = await ctx.database.get('echo_cave_v2', {
+        channelId: session.channelId,
+    });
+
+    const matchingCaves = caves.filter((cave) =>
+        cave.relatedUsers.length === 0
+            ? cave.originUserId === targetUserId
+            : cave.relatedUsers.includes(targetUserId)
+    );
+
+    if (matchingCaves.length === 0) {
+        return session.text('.noMatchingUserCave');
+    }
+
+    return selectRandomCave(matchingCaves);
+}
+
+export async function getCave(ctx: Context, session: Session, cfg: Config, target?: string) {
     const guildAccessError = ensureGuildSession(session);
     if (guildAccessError) {
         return session.text(guildAccessError);
     }
 
+    const maintenanceMessage = getCaveMaintenanceMessage(session);
+    if (maintenanceMessage) {
+        return maintenanceMessage;
+    }
+
     let caveMsg: EchoCave;
+    let shouldIncrementDrawCount = true;
 
     const { channelId } = session;
 
-    if (!id) {
+    if (!target) {
         const caves = await ctx.database.get('echo_cave_v2', {
             channelId,
         });
@@ -79,37 +138,53 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
             return session.text('.noMsgInCave');
         }
 
-        // Use weighted random selection based on drawCount
         const alpha = cfg.alpha ?? 0.2;
+        caveMsg = selectWeightedRandomCave(caves, alpha);
+    } else {
+        const trimmedTarget = target.trim();
+        const parseResult = parseUserIds(trimmedTarget);
 
-        // Calculate weights for each cave
-        const weights = caves.map((cave) => 1 / (1 + cave.drawCount * alpha));
-
-        // Calculate total weight
-        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-
-        // Generate a random number between 0 and totalWeight
-        let random = Math.random() * totalWeight;
-
-        // Select cave based on weights
-        let selectedIndex = 0;
-        while (random > weights[selectedIndex]) {
-            random -= weights[selectedIndex];
-            selectedIndex++;
+        if (parseResult.error === 'invalid_all_mention') {
+            return session.text('echo-cave.user.invalidAllMention');
         }
 
-        caveMsg = caves[selectedIndex];
-    } else {
-        const caves = await ctx.database.get('echo_cave_v2', {
-            id,
-            channelId,
-        });
+        const isExactNumericTarget = /^\d+$/.test(trimmedTarget);
+        if (isExactNumericTarget) {
+            const id = Number(trimmedTarget);
+            const caves = await ctx.database.get('echo_cave_v2', {
+                id,
+                channelId,
+            });
 
-        if (caves.length === 0) {
+            if (caves.length > 0) {
+                caveMsg = caves[0];
+
+                try {
+                    await sendCaveMsg(ctx, session, caveMsg, cfg);
+                } catch (error) {
+                    return await handleCaveSendFailure(ctx, session, caveMsg, cfg, error);
+                }
+
+                await incrementDrawCount(ctx, caveMsg);
+                return;
+            }
+        }
+
+        if (parseResult.parsedUserIds.length === 0) {
             return session.text('echo-cave.general.noMsgWithId');
         }
 
-        caveMsg = caves[0];
+        const targetedResult = await getTargetedUserCave(ctx, session, parseResult.parsedUserIds[0]);
+        if (!targetedResult) {
+            return session.text('.noMatchingUserCave');
+        }
+
+        if (typeof targetedResult === 'string') {
+            return targetedResult;
+        }
+
+        caveMsg = targetedResult;
+        shouldIncrementDrawCount = false;
     }
 
     try {
@@ -118,5 +193,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, id: n
         return await handleCaveSendFailure(ctx, session, caveMsg, cfg, error);
     }
 
-    await incrementDrawCount(ctx, caveMsg);
+    if (shouldIncrementDrawCount) {
+        await incrementDrawCount(ctx, caveMsg);
+    }
 }

@@ -3,6 +3,7 @@ import { Schema } from 'koishi';
 
 export type SendFailureHandlingMode = 'auto-delete' | 'daily-report' | 'ignore';
 export type OversizedMediaCleanupMode = 'delete-cave' | 'keep-cave';
+export type ForwardSpecialUserHandlingMode = 'ignore' | 'reject' | 'confirm';
 
 export interface Config {
     adminMessageProtection?: boolean;
@@ -20,6 +21,8 @@ export interface Config {
     rankingTopCount?: number;
     forwardSelectTimeout?: number;
     enableForwardUserSelection?: boolean;
+    autoBindSingleForwardUser?: boolean;
+    forwardSpecialUserHandlingMode?: ForwardSpecialUserHandlingMode;
     alpha?: number;
     mediaStorage?: 'local' | 's3';
     s3Bucket?: string;
@@ -49,6 +52,8 @@ export const Config: Schema<Config> = Schema.intersect([
         sendAllAsForwardMsg: Schema.boolean().default(false),
         enableForwardUserSelection: Schema.boolean().default(true),
         forwardSelectTimeout: Schema.number().default(20),
+        autoBindSingleForwardUser: Schema.boolean().default(false),
+        forwardSpecialUserHandlingMode: Schema.union(['ignore', 'reject', 'confirm']).default('ignore'),
     }).description('消息行为'),
     Schema.object({
         deleteMediaWhenDeletingMsg: Schema.boolean().default(true),

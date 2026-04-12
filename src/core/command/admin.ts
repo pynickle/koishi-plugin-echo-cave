@@ -1,4 +1,5 @@
 import { Config } from '../../config/config';
+import { EchoCave } from '../../index';
 import {
     MediaType,
     inspectCaveMediaRefs,
@@ -8,13 +9,43 @@ import {
 } from '../../utils/media/media-helper';
 import { listenForUserMessage } from '../../utils/msg/message-listener';
 import { Context, Session } from 'koishi';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+
+const REINDEX_SPECIAL_OFFSET = 1000000;
+let caveMaintenanceLock = false;
 
 interface IdRange {
     start: number;
     end: number;
 }
 
+interface ReindexPlanItem {
+    oldId: number;
+    newId: number;
+    tempId: number;
+}
+
+interface ReindexBackupPayload {
+    createdAt: string;
+    records: EchoCave[];
+    mapping: ReindexPlanItem[];
+}
+
+export function getCaveMaintenanceMessage(session: Session): string | null {
+    return caveMaintenanceLock ? session.text('echo-cave.general.maintenanceLocked') : null;
+}
+
+function setCaveMaintenanceLock(value: boolean) {
+    caveMaintenanceLock = value;
+}
+
 function ensureAdminPrivateAccess(session: Session, cfg: Config): string | null {
+    const maintenanceMessage = getCaveMaintenanceMessage(session);
+    if (maintenanceMessage) {
+        return maintenanceMessage;
+    }
+
     if (session.guildId) {
         return session.text('echo-cave.general.adminPrivateOnly');
     }
@@ -372,5 +403,184 @@ export async function inspectMediaRefsForMigration(
                 refs: refs.join('\n'),
             })
         );
+    }
+}
+
+function buildReindexPlan(caves: EchoCave[]): ReindexPlanItem[] {
+    const maxId = caves.reduce((currentMax, cave) => Math.max(currentMax, cave.id), 0);
+    const offset = maxId + caves.length + REINDEX_SPECIAL_OFFSET;
+
+    return caves.map((cave, index) => ({
+        oldId: cave.id,
+        newId: index + 1,
+        tempId: cave.id + offset,
+    }));
+}
+
+function hasIdGaps(plan: ReindexPlanItem[]) {
+    return plan.some((item) => item.oldId !== item.newId);
+}
+
+async function writeReindexBackup(
+    backupDir: string,
+    caves: EchoCave[],
+    mapping: ReindexPlanItem[]
+) {
+    await fs.mkdir(backupDir, { recursive: true });
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = path.join(backupDir, `echo-cave-reindex-${timestamp}.json`);
+    const payload: ReindexBackupPayload = {
+        createdAt: new Date().toISOString(),
+        records: caves,
+        mapping,
+    };
+
+    await fs.writeFile(backupPath, JSON.stringify(payload, null, 2), 'utf8');
+    return backupPath;
+}
+
+async function applyReindexPlan(ctx: Context, plan: ReindexPlanItem[]) {
+    const descendingPlan = [...plan].sort((a, b) => b.oldId - a.oldId);
+    for (const item of descendingPlan) {
+        if (item.oldId === item.newId) {
+            continue;
+        }
+
+        await ctx.database.set('echo_cave_v2', { id: item.oldId }, { id: item.tempId });
+    }
+
+    const ascendingPlan = [...plan].sort((a, b) => a.newId - b.newId);
+    for (const item of ascendingPlan) {
+        if (item.oldId === item.newId) {
+            continue;
+        }
+
+        await ctx.database.set('echo_cave_v2', { id: item.tempId }, { id: item.newId });
+    }
+}
+
+async function verifyReindexPlan(ctx: Context, originalCaves: EchoCave[]) {
+    const reindexedCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+
+    if (reindexedCaves.length !== originalCaves.length) {
+        throw new Error('record_count_mismatch');
+    }
+
+    const normalizedOriginal = [...originalCaves]
+        .sort((a, b) => a.id - b.id)
+        .map((cave) => ({
+            channelId: cave.channelId,
+            content: cave.content,
+            createTime: new Date(cave.createTime).toISOString(),
+            drawCount: cave.drawCount,
+            originUserId: cave.originUserId,
+            relatedUsers: [...cave.relatedUsers],
+            type: cave.type,
+            userId: cave.userId,
+        }));
+    const normalizedReindexed = reindexedCaves.map((cave, index) => ({
+        channelId: cave.channelId,
+        content: cave.content,
+        createTime: new Date(cave.createTime).toISOString(),
+        drawCount: cave.drawCount,
+        id: cave.id,
+        originUserId: cave.originUserId,
+        relatedUsers: [...cave.relatedUsers],
+        type: cave.type,
+        userId: cave.userId,
+        expectedId: index + 1,
+    }));
+
+    for (let index = 0; index < normalizedReindexed.length; index++) {
+        const reindexed = normalizedReindexed[index];
+        const original = normalizedOriginal[index];
+
+        if (reindexed.id !== reindexed.expectedId) {
+            throw new Error('id_sequence_mismatch');
+        }
+
+        if (
+            reindexed.channelId !== original.channelId ||
+            reindexed.content !== original.content ||
+            reindexed.createTime !== original.createTime ||
+            reindexed.drawCount !== original.drawCount ||
+            reindexed.originUserId !== original.originUserId ||
+            reindexed.relatedUsers.join(',') !== original.relatedUsers.join(',') ||
+            reindexed.type !== original.type ||
+            reindexed.userId !== original.userId
+        ) {
+            throw new Error('record_content_mismatch');
+        }
+    }
+}
+
+export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config) {
+    if (caveMaintenanceLock) {
+        return session.text('echo-cave.general.maintenanceLocked');
+    }
+
+    if (session.guildId) {
+        return session.text('echo-cave.general.adminPrivateOnly');
+    }
+
+    if (!cfg.adminIds?.includes(session.userId)) {
+        return session.text('echo-cave.general.adminPermissionDenied');
+    }
+
+    const caves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+    if (caves.length === 0) {
+        return session.text('commands.cave.admin.reindex.messages.noCaves');
+    }
+
+    const plan = buildReindexPlan(caves);
+    if (!hasIdGaps(plan)) {
+        return session.text('commands.cave.admin.reindex.messages.alreadySequential');
+    }
+
+    let backupPath: string;
+    try {
+        backupPath = await writeReindexBackup(path.resolve(process.cwd(), 'logs'), caves, plan);
+    } catch (error) {
+        ctx.logger.error(`Failed to write cave reindex backup: ${error}`);
+        return session.text('commands.cave.admin.reindex.messages.backupWriteFailed', {
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+
+    const confirmed = await requestSecondConfirmation(
+        ctx,
+        session,
+        session.text('commands.cave.admin.reindex.messages.confirmSummary', {
+            caveCount: caves.length,
+            currentMaxId: caves[caves.length - 1].id,
+            nextMaxId: caves.length,
+            backupPath,
+        }),
+        session.text('commands.cave.admin.reindex.messages.confirmRetry'),
+        session.text('commands.cave.admin.reindex.messages.confirmTimeout'),
+        session.text('commands.cave.admin.reindex.messages.confirmCancelled')
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setCaveMaintenanceLock(true);
+    try {
+        await applyReindexPlan(ctx, plan);
+        await verifyReindexPlan(ctx, caves);
+        return session.text('commands.cave.admin.reindex.messages.reindexDone', {
+            caveCount: caves.length,
+            backupPath,
+        });
+    } catch (error) {
+        ctx.logger.error(`Failed to reindex cave ids: ${error}`);
+        return session.text('commands.cave.admin.reindex.messages.reindexFailed', {
+            backupPath,
+            error: error instanceof Error ? error.message : String(error),
+        });
+    } finally {
+        setCaveMaintenanceLock(false);
     }
 }

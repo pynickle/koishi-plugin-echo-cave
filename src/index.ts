@@ -5,6 +5,7 @@ import {
     mergeCavesBetweenChannels,
     migrateLegacyLocalMedia,
     migrateMediaToS3,
+    reindexCaveIds,
 } from './core/command/admin';
 import { deleteCave, deleteCaves } from './core/command/delete-cave';
 import { getCave, getCaveListByOriginUser, getCaveListByUser } from './core/command/get-cave';
@@ -44,11 +45,17 @@ export interface EchoCaveSendFailure {
     errorMessage: string;
 }
 
+export interface EchoCaveUserState {
+    userId: string;
+    hasCompletedForwardSelection: boolean;
+}
+
 declare module 'koishi' {
     interface Tables {
         echo_cave: EchoCave;
         echo_cave_v2: EchoCave;
         echo_cave_send_failure: EchoCaveSendFailure;
+        echo_cave_user_state: EchoCaveUserState;
     }
 }
 
@@ -111,6 +118,17 @@ export function apply(ctx: Context, cfg: Config) {
         }
     );
 
+    ctx.model.extend(
+        'echo_cave_user_state',
+        {
+            userId: 'string',
+            hasCompletedForwardSelection: { type: 'boolean', initial: false },
+        },
+        {
+            primary: 'userId',
+        }
+    );
+
     ctx.model.migrate(
         'echo_cave',
         {
@@ -123,8 +141,8 @@ export function apply(ctx: Context, cfg: Config) {
     );
 
     // Get Cave
-    ctx.command('cave [id:number]').action(
-        async ({ session }, id) => await getCave(ctx, session, cfg, id)
+    ctx.command('cave [target:text]').action(
+        async ({ session }, target) => await getCave(ctx, session, cfg, target)
     );
 
     ctx.command('cave.listen').action(async ({ session }) => await getCaveListByUser(ctx, session));
@@ -187,6 +205,10 @@ export function apply(ctx: Context, cfg: Config) {
     ctx.command('cave.admin.inspect-media [idRanges:text]').action(
         async ({ session }, idRanges) =>
             await inspectMediaRefsForMigration(ctx, session, cfg, idRanges)
+    );
+
+    ctx.command('cave.admin.reindex').action(
+        async ({ session }) => await reindexCaveIds(ctx, session, cfg)
     );
 
     registerSendFailureSummaryScheduler(ctx, cfg);

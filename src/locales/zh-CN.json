@@ -5,7 +5,8 @@
       "adminPrivateOnly": "❌ 该命令仅允许在私聊中使用！",
       "adminPermissionDenied": "⛔ 您不在管理员 ID 列表中，无法使用该命令！",
       "noMsgWithId": "🔍 未找到该 ID 的回声洞消息",
-      "noTemplatesConfigured": "❌ 未配置回声洞模板，请先配置模板！"
+      "noTemplatesConfigured": "❌ 未配置回声洞模板，请先配置模板！",
+      "maintenanceLocked": "⛔ 回声洞正在执行维护操作，请稍后再试。"
     },
     "user": {
       "invalidAllMention": "❌ 不支持 @全体成员，请直接指定具体用户！",
@@ -31,9 +32,10 @@
   },
   "commands": {
     "cave": {
-      "description": "随机获取 / 获取特定 id 的回声洞信息",
+      "description": "随机获取 / 获取特定 id / 按用户随机获取回声洞信息",
       "messages": {
         "noMsgInCave": "🚀 回声洞中暂无消息，快使用 \"cave.echo\" 命令添加第一条消息吧！",
+        "noMatchingUserCave": "🔍 未找到与该用户相关的回声洞消息。",
         "sendPartialFailure": "⚠️ 回声洞标题已发送，但正文发送失败了，请稍后再试。",
         "sendBodyFailed": "回声洞正文发送失败",
         "sendFailedAutoDeleted": "⚠️ 回声洞 #{id} 发送失败，已自动从回声洞删除。",
@@ -58,9 +60,15 @@
         "mediaSaving": "⏳ 检测到媒体资源，正在存储媒体文件，请稍候……",
         "msgSaved": "✅ 回声洞消息已成功存入，消息 ID：{id}",
         "msgFailedToSave": "❌ 回声洞保存失败，请稍后重试！",
-        "selectRelatedUsers": "请选择要关联的用户（以空格分隔序号，输入'all'选择全部）：",
-        "selectInstruction": "输入示例：1 3 或 all 或 skip",
-        "invalidSelection": "❌ 无效的选择，请重新输入！"
+        "selectRelatedUsersDetailed": "请选择要关联的用户（序号之间以空格分隔，输入 all 选择全部，输入 skip 跳过）：",
+        "selectRelatedUsersSimple": "请选择要关联的用户：",
+        "selectInstructionDetailed": "输入示例：1 2 或 all 或 skip",
+        "selectInstructionBrief": "回复序号 / all / skip",
+        "invalidSelection": "❌ 无效的选择，请重新输入！",
+        "specialForwardUserBlocked": "⚠️ 检测到该合并转发中包含特殊用户 1094950020，当前配置不允许存储这条回声洞。该提示会在 1 分钟后自动撤回。",
+        "specialForwardUserConfirmNotice": "⚠️ 检测到该合并转发中包含特殊用户 1094950020。下面会重新发出读取到的转发内容，请确认是否仍要存储。",
+        "specialForwardUserConfirmPrompt": "请在 60 秒内回复“存储”继续，回复“取消”或“不存”放弃。",
+        "specialForwardUserConfirmRetry": "⚠️ 无法识别输入，请回复“存储”或“取消”。"
       }
     },
     "cave.drop": {
@@ -197,6 +205,20 @@
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次检测。",
         "confirmTimeout": "⌛ 二次确认超时，检测未执行。"
+      }
+    },
+    "cave.admin.reindex": {
+      "description": "重排所有回声洞 ID，使现有记录重新连续编号",
+      "messages": {
+        "noCaves": "🔍 当前没有任何回声洞记录可供重排。",
+        "alreadySequential": "✅ 当前所有回声洞 ID 已经连续，无需重排。",
+        "backupWriteFailed": "❌ 回声洞 ID 重排前的备份写入失败，操作已终止。错误：{error}",
+        "confirmSummary": "⚠️ 即将执行回声洞 ID 重排\n当前记录数：{caveCount}\n当前最大 ID：{currentMaxId}\n重排后最大 ID：{nextMaxId}\n备份文件：{backupPath}\n\n本次操作会先写入完整备份，再按安全顺序重排 ID。执行期间会临时锁定回声洞相关命令。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
+        "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
+        "confirmCancelled": "🛑 已取消本次回声洞 ID 重排。",
+        "confirmTimeout": "⌛ 二次确认超时，回声洞 ID 重排未执行。",
+        "reindexDone": "✅ 回声洞 ID 重排完成，共处理 {caveCount} 条记录。备份文件：{backupPath}",
+        "reindexFailed": "❌ 回声洞 ID 重排失败，已停止继续写入。请根据备份文件检查并恢复：{backupPath}\n错误：{error}"
       }
     }
   }

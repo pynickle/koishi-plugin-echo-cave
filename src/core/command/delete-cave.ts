@@ -1,5 +1,6 @@
 import { Config } from '../../config/config';
 import { EchoCave } from '../../index';
+import { getCaveMaintenanceMessage } from './admin';
 import { deleteMediaFilesFromMessage } from '../../utils/media/media-helper';
 import { Context, Session } from 'koishi';
 
@@ -72,6 +73,11 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
         return session.text(guildAccessError);
     }
 
+    const maintenanceMessage = getCaveMaintenanceMessage(session);
+    if (maintenanceMessage) {
+        return maintenanceMessage;
+    }
+
     if (!id) {
         return session.text('.noIdProvided');
     }
@@ -97,6 +103,11 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
     const guildAccessError = ensureGuildSession(session);
     if (guildAccessError) {
         return session.text(guildAccessError);
+    }
+
+    const maintenanceMessage = getCaveMaintenanceMessage(session);
+    if (maintenanceMessage) {
+        return maintenanceMessage;
     }
 
     if (!ids || ids.length === 0) {

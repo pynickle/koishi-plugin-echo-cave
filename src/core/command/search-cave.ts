@@ -1,10 +1,16 @@
 import { checkUsersInGroup, getUserName } from '../../adapters/onebot/user';
+import { getCaveMaintenanceMessage } from './admin';
 import { parseUserIds } from '../../utils/msg/element-helper';
 import { Context, Session, $ } from 'koishi';
 
 export async function searchCave(ctx: Context, session: Session, userIds: string) {
     if (!session.guildId) {
         return session.text('echo-cave.general.privateChatReminder');
+    }
+
+    const maintenanceMessage = getCaveMaintenanceMessage(session);
+    if (maintenanceMessage) {
+        return maintenanceMessage;
     }
 
     if (!userIds) {
