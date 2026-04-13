@@ -180,23 +180,17 @@ export function apply(ctx: Context, cfg: Config) {
         }
     );
 
-    ctx.model.migrate(
-        'echo_cave_v2',
-        {
-            entryId: 'unsigned',
-        },
-        async (database) => {
-            const existing = await database.get(ACTIVE_CAVE_TABLE, {});
-            if (existing.length > 0) {
-                return;
-            }
-
-            const data = (await database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
-            for (const record of data) {
-                await database.create(ACTIVE_CAVE_TABLE, toV3Record(record));
-            }
+    ctx.model.migrate('echo_cave_v2', {}, async (database) => {
+        const existing = await database.get(ACTIVE_CAVE_TABLE, {});
+        if (existing.length > 0) {
+            return;
         }
-    );
+
+        const data = (await database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+        for (const record of data) {
+            await database.create(ACTIVE_CAVE_TABLE, toV3Record(record));
+        }
+    });
 
     // Get Cave
     ctx.command('cave [target:text]').action(

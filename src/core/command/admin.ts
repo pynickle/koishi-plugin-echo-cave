@@ -146,7 +146,9 @@ function isEchoCaveRecord(value: unknown): value is EchoCave {
     return (
         typeof value.id === 'number' &&
         typeof value.channelId === 'string' &&
-        (value.createTime instanceof Date || typeof value.createTime === 'string' || typeof value.createTime === 'number') &&
+        (value.createTime instanceof Date ||
+            typeof value.createTime === 'string' ||
+            typeof value.createTime === 'number') &&
         typeof value.userId === 'string' &&
         typeof value.originUserId === 'string' &&
         (value.type === 'forward' || value.type === 'msg') &&
@@ -162,8 +164,10 @@ function isCaveBackupRecord(value: unknown): value is CaveBackupRecord {
         return false;
     }
 
-    return typeof (value as { entryId?: unknown }).entryId === 'number' ||
-        typeof (value as { entryId?: unknown }).entryId === 'undefined';
+    return (
+        typeof (value as { entryId?: unknown }).entryId === 'number' ||
+        typeof (value as { entryId?: unknown }).entryId === 'undefined'
+    );
 }
 
 function isReindexPlanItem(value: unknown): value is ReindexPlanItem {
@@ -188,11 +192,17 @@ function parseReindexBackupPayload(content: string): ReindexBackupPayload {
         throw new Error('invalid_backup_created_at');
     }
 
-    if (!Array.isArray(parsed.records) || !parsed.records.every((record) => isCaveBackupRecord(record))) {
+    if (
+        !Array.isArray(parsed.records) ||
+        !parsed.records.every((record) => isCaveBackupRecord(record))
+    ) {
         throw new Error('invalid_backup_records');
     }
 
-    if (!Array.isArray(parsed.mapping) || !parsed.mapping.every((item) => isReindexPlanItem(item))) {
+    if (
+        !Array.isArray(parsed.mapping) ||
+        !parsed.mapping.every((item) => isReindexPlanItem(item))
+    ) {
         throw new Error('invalid_backup_mapping');
     }
 
@@ -293,7 +303,9 @@ function parseBooleanOption(value: string | undefined, defaultValue: boolean): b
 
 function getBooleanLabel(session: Session, value: boolean): string {
     return session.text(
-        value ? 'commands.cave.admin.common.boolean.keep' : 'commands.cave.admin.common.boolean.drop'
+        value
+            ? 'commands.cave.admin.common.boolean.keep'
+            : 'commands.cave.admin.common.boolean.drop'
     );
 }
 
@@ -481,7 +493,7 @@ export async function mergeCavesBetweenChannels(
     return appendFailedRecordSummary(
         session,
         session.text('commands.cave.admin.merge.messages.mergeDone', result),
-        result.failedRecordIds,
+        result.failedRecordIds
     );
 }
 
@@ -495,7 +507,7 @@ export async function migrateLegacyLocalMedia(ctx: Context, session: Session, cf
     return appendFailedRecordSummary(
         session,
         session.text('commands.cave.admin.migrate-local-v2.messages.migrateDone', result),
-        result.failedRecordIds,
+        result.failedRecordIds
     );
 }
 
@@ -558,7 +570,7 @@ export async function migrateMediaToS3(
     return appendFailedRecordSummary(
         session,
         session.text('commands.cave.admin.migrate-s3.messages.migrateDone', result),
-        result.failedRecordIds,
+        result.failedRecordIds
     );
 }
 
@@ -653,7 +665,9 @@ async function applyReindexPlan(ctx: Context, originalCaves: EchoCave[]) {
 
 async function verifyCaveSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
     const actualCaves = (await getAllCaves(ctx)).sort((a, b) => a.id - b.id);
-    const normalizedExpected = [...expectedCaves].sort((a, b) => a.id - b.id).map(normalizeCaveRecord);
+    const normalizedExpected = [...expectedCaves]
+        .sort((a, b) => a.id - b.id)
+        .map(normalizeCaveRecord);
     const normalizedActual = actualCaves.map(normalizeCaveRecord);
 
     if (normalizedActual.length !== normalizedExpected.length) {
@@ -676,7 +690,9 @@ async function verifyCaveSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
 
 async function verifyRestoredSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
     const actualCaves = (await getAllCaves(ctx)).sort((a, b) => a.id - b.id);
-    const normalizedExpected = [...expectedCaves].sort((a, b) => a.id - b.id).map(normalizeBackupRecord);
+    const normalizedExpected = [...expectedCaves]
+        .sort((a, b) => a.id - b.id)
+        .map(normalizeBackupRecord);
     const normalizedActual = actualCaves.map(normalizeCaveRecord);
 
     if (normalizedActual.length !== normalizedExpected.length) {
@@ -841,7 +857,9 @@ export async function restoreReindexBackup(
 
 async function runScheduledReindex(ctx: Context, cfg: Config) {
     if (caveMaintenanceLock) {
-        ctx.logger.warn('Skipped scheduled cave reindex because another maintenance task is running.');
+        ctx.logger.warn(
+            'Skipped scheduled cave reindex because another maintenance task is running.'
+        );
         return;
     }
 

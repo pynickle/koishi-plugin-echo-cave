@@ -1025,7 +1025,13 @@ export async function processStoredMessageMedia(
     progressOptions?: MediaSaveProgressOptions
 ): Promise<string> {
     const rewritten = await mutateMessageContent(ctx, content, async (element) => {
-        return (await processMediaElement(ctx, element, cfg, channelId, progressOptions)) as MaybeMediaElement;
+        return (await processMediaElement(
+            ctx,
+            element,
+            cfg,
+            channelId,
+            progressOptions
+        )) as MaybeMediaElement;
     });
 
     return rewritten.content;
@@ -1104,7 +1110,9 @@ async function deleteCavesForOversizedMedia(
             await removeCaveByEntryId(ctx, cave.entryId);
             ctx.logger.info(`Deleted cave #${cave.id} because its media exceeded the size limit.`);
         } catch (error) {
-            ctx.logger.warn(`Failed to delete cave #${cave.id} during oversized media cleanup: ${error}`);
+            ctx.logger.warn(
+                `Failed to delete cave #${cave.id} during oversized media cleanup: ${error}`
+            );
         }
     }
 }

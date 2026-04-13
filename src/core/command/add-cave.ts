@@ -77,13 +77,7 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         type = 'forward';
         rawForwardMessage = await session.onebot.getForwardMsg(messageId);
 
-        const message = await reconstructForwardMsg(
-            ctx,
-            session,
-            rawForwardMessage,
-            cfg,
-            false
-        );
+        const message = await reconstructForwardMsg(ctx, session, rawForwardMessage, cfg, false);
 
         hasMedia = await messageContainsMedia(message);
         needsDeferredMediaProcessing = true;
@@ -141,8 +135,12 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
         hasMedia = await messageContainsMedia(msgJson);
 
         content = JSON.stringify(
-            await processMediaWithOptionalProgress(session, cfg, hasMedia, async (progressOptions) =>
-                await processMessageContent(ctx, msgJson, cfg, channelId, progressOptions)
+            await processMediaWithOptionalProgress(
+                session,
+                cfg,
+                hasMedia,
+                async (progressOptions) =>
+                    await processMessageContent(ctx, msgJson, cfg, channelId, progressOptions)
             )
         );
     }
@@ -171,8 +169,18 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
     }
 
     if (needsDeferredMediaProcessing) {
-        content = await processMediaWithOptionalProgress(session, cfg, hasMedia, async (progressOptions) =>
-            await processStoredMessageMedia(ctx, content as string, cfg, channelId, progressOptions)
+        content = await processMediaWithOptionalProgress(
+            session,
+            cfg,
+            hasMedia,
+            async (progressOptions) =>
+                await processStoredMessageMedia(
+                    ctx,
+                    content as string,
+                    cfg,
+                    channelId,
+                    progressOptions
+                )
         );
     }
 
@@ -242,7 +250,9 @@ async function formatRelatedUsers(
 
     if (relatedUserIds.length !== 0) {
         const relatedUserNames = await Promise.all(
-            relatedUserIds.map(async (relatedUserId) => await getUserName(ctx, session, relatedUserId))
+            relatedUserIds.map(
+                async (relatedUserId) => await getUserName(ctx, session, relatedUserId)
+            )
         );
         return relatedUserNames.join(', ');
     }
@@ -261,7 +271,9 @@ function containsSpecialForwardUser(messages: Message[], targetUserId: number): 
         }
 
         return msg.message.some(
-            (element) => element.type === 'forward' && containsSpecialForwardUser(element.data.content, targetUserId)
+            (element) =>
+                element.type === 'forward' &&
+                containsSpecialForwardUser(element.data.content, targetUserId)
         );
     });
 }
@@ -281,7 +293,11 @@ async function markForwardSelectionGuideCompleted(ctx: Context, userId: string) 
         return;
     }
 
-    await ctx.database.set('echo_cave_user_state', { userId }, { hasCompletedForwardSelection: true });
+    await ctx.database.set(
+        'echo_cave_user_state',
+        { userId },
+        { hasCompletedForwardSelection: true }
+    );
 }
 
 async function selectRelatedUsers(
@@ -332,7 +348,9 @@ async function selectRelatedUsers(
                         selectedUsers = validIndices.map((index) => forwardUsers[index]);
                     } else {
                         sentMessageIds.push(
-                            ...normalizeMessageIds(await session.send(session.text('.invalidSelection')))
+                            ...normalizeMessageIds(
+                                await session.send(session.text('.invalidSelection'))
+                            )
                         );
                         return true;
                     }
@@ -398,13 +416,20 @@ async function confirmSpecialForwardStorage(
                     return false;
                 }
 
-                if (normalized === '取消' || normalized === '不存' || normalized === 'cancel' || normalized === 'skip') {
+                if (
+                    normalized === '取消' ||
+                    normalized === '不存' ||
+                    normalized === 'cancel' ||
+                    normalized === 'skip'
+                ) {
                     resolve(false);
                     return false;
                 }
 
                 sentMessageIds.push(
-                    ...normalizeMessageIds(await session.send(session.text('.specialForwardUserConfirmRetry')))
+                    ...normalizeMessageIds(
+                        await session.send(session.text('.specialForwardUserConfirmRetry'))
+                    )
                 );
                 return true;
             },

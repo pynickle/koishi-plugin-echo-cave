@@ -55,7 +55,9 @@ export const Config: Schema<Config> = Schema.intersect([
         enableForwardUserSelection: Schema.boolean().default(true),
         forwardSelectTimeout: Schema.number().default(20),
         autoBindSingleForwardUser: Schema.boolean().default(false),
-        forwardSpecialUserHandlingMode: Schema.union(['ignore', 'reject', 'confirm']).default('ignore'),
+        forwardSpecialUserHandlingMode: Schema.union(['ignore', 'reject', 'confirm']).default(
+            'ignore'
+        ),
     }).description('消息行为'),
     Schema.object({
         deleteMediaWhenDeletingMsg: Schema.boolean().default(true),
@@ -79,7 +81,9 @@ export const Config: Schema<Config> = Schema.intersect([
         s3PresignExpiresIn: Schema.number().default(3600).min(60).max(604800),
     }).description('媒体存储'),
     Schema.object({
-        sendFailureHandlingMode: Schema.union(['auto-delete', 'daily-report', 'ignore']).default('ignore'),
+        sendFailureHandlingMode: Schema.union(['auto-delete', 'daily-report', 'ignore']).default(
+            'ignore'
+        ),
         sendFailureSummaryAdminId: Schema.string().default(''),
         sendFailureSummaryTime: Schema.string().default('09:00'),
     }).description('发送失败处理'),

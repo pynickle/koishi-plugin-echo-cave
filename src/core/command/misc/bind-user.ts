@@ -51,9 +51,13 @@ export async function bindUsersToCave(
     }
 
     // Update cave with new related users (direct modification)
-    await ctx.database.set(ACTIVE_CAVE_TABLE, { entryId: cave.entryId }, {
-        relatedUsers: parsedUserIds,
-    });
+    await ctx.database.set(
+        ACTIVE_CAVE_TABLE,
+        { entryId: cave.entryId },
+        {
+            relatedUsers: parsedUserIds,
+        }
+    );
 
     return session.text('.userBoundSuccess', [id]);
 }

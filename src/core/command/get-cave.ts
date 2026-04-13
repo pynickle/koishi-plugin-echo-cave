@@ -175,7 +175,11 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, targe
             return session.text('echo-cave.general.noMsgWithId');
         }
 
-        const targetedResult = await getTargetedUserCave(ctx, session, parseResult.parsedUserIds[0]);
+        const targetedResult = await getTargetedUserCave(
+            ctx,
+            session,
+            parseResult.parsedUserIds[0]
+        );
         if (!targetedResult) {
             return session.text('.noMatchingUserCave');
         }

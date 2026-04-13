@@ -14,7 +14,13 @@ export async function reconstructForwardMsg(
 ): Promise<CQCode[]> {
     return Promise.all(
         message.map(async (msg: Message) => {
-            const content = await processForwardMessageContent(ctx, session, msg, cfg, processMedia);
+            const content = await processForwardMessageContent(
+                ctx,
+                session,
+                msg,
+                cfg,
+                processMedia
+            );
 
             const senderNickname = msg.sender.nickname;
 

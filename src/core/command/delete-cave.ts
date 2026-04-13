@@ -122,7 +122,9 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
     const failedIds: number[] = [];
     const actor = await getDeleteActor(ctx, session);
 
-    const caves = (await getCavesByPublicIds(ctx, ids)).filter((cave) => cave.channelId === session.channelId);
+    const caves = (await getCavesByPublicIds(ctx, ids)).filter(
+        (cave) => cave.channelId === session.channelId
+    );
     for (const cave of caves) {
         const permissionFailure = await getDeletePermissionFailure(ctx, session, cfg, cave, actor);
         if (permissionFailure) {

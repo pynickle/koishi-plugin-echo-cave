@@ -59,7 +59,7 @@ async function handleAutoDeleteOnFailure(
     ctx: Context,
     session: Session,
     caveMsg: EchoCave,
-    cfg: Config,
+    cfg: Config
 ): Promise<string> {
     try {
         await deleteStoredCave(ctx, cfg, caveMsg);
@@ -98,7 +98,9 @@ async function handleDailyReportOnFailure(
         });
     } catch (recordError) {
         const recordErrorMessage = normalizeErrorMessage(ctx, recordError);
-        ctx.logger.error(`Failed to record cave send failure for #${caveMsg.id}: ${recordErrorMessage}`);
+        ctx.logger.error(
+            `Failed to record cave send failure for #${caveMsg.id}: ${recordErrorMessage}`
+        );
         return session.text('commands.cave.messages.sendFailedReportRecordFailed', {
             id: caveMsg.id,
         });
@@ -131,7 +133,9 @@ function scheduleNextSendFailureSummary(ctx: Context, cfg: Config) {
         try {
             await flushSendFailureSummary(ctx, cfg);
         } catch (error) {
-            ctx.logger.error(`Failed to flush cave send failure summary: ${normalizeErrorMessage(ctx, error)}`);
+            ctx.logger.error(
+                `Failed to flush cave send failure summary: ${normalizeErrorMessage(ctx, error)}`
+            );
         }
 
         scheduleNextSendFailureSummary(ctx, cfg);
@@ -141,7 +145,9 @@ function scheduleNextSendFailureSummary(ctx: Context, cfg: Config) {
 async function flushSendFailureSummary(ctx: Context, cfg: Config) {
     const adminId = cfg.sendFailureSummaryAdminId?.trim();
     if (!adminId) {
-        ctx.logger.warn('Skipped cave send failure summary because sendFailureSummaryAdminId is empty.');
+        ctx.logger.warn(
+            'Skipped cave send failure summary because sendFailureSummaryAdminId is empty.'
+        );
         return;
     }
 
@@ -155,7 +161,9 @@ async function flushSendFailureSummary(ctx: Context, cfg: Config) {
         const [platform, selfId] = botKey.split(':');
         const bot = ctx.bots.find((item) => item.platform === platform && item.selfId === selfId);
         if (!bot) {
-            ctx.logger.warn(`Skipped cave send failure summary because bot ${botKey} is unavailable.`);
+            ctx.logger.warn(
+                `Skipped cave send failure summary because bot ${botKey} is unavailable.`
+            );
             continue;
         }
 
@@ -329,7 +337,11 @@ function normalizeErrorMessage(ctx: Context, error: unknown): string {
     return renderLocaleText(ctx, 'commands.cave.messages.unknownError');
 }
 
-function renderLocaleText(ctx: Context, path: string, params: Record<string, unknown> = {}): string {
+function renderLocaleText(
+    ctx: Context,
+    path: string,
+    params: Record<string, unknown> = {}
+): string {
     const locales = [...(ctx.root.config.i18n?.locales || []), 'zh-CN'];
     return ctx.i18n.render(locales, [path], params).join('');
 }

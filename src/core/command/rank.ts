@@ -97,8 +97,7 @@ function getStartTime(period: Period, customTimeMs?: number): Date {
             // Start of today (00:00:00)
             startTime.setHours(0, 0, 0, 0);
             break;
-        case 'week':
-        {
+        case 'week': {
             // Start of this week (Monday 00:00:00)
             const dayOfWeek = now.getDay();
             const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
