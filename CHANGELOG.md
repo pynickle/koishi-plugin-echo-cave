@@ -1,3 +1,9 @@
+## [1.29.13](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.12...v1.29.13) (2026-04-13)
+
+### 🐛 Bug Fixes
+
+* incorrect sequential reindex judgement ([263aa87](https://github.com/pynickle/koishi-plugin-echo-cave/commit/263aa879284bbf5396e1ed4bc8cbdf107c469930))
+
 ## [1.29.12](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.11...v1.29.12) (2026-04-13)
 
 ### 🐛 Bug Fixes
