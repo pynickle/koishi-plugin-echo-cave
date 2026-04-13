@@ -1,5 +1,6 @@
 import { Config } from '../../config/config';
 import { checkUsersInGroup } from '../../adapters/onebot/user';
+import { ACTIVE_CAVE_TABLE } from '../cave-store';
 import { handleCaveSendFailure } from '../send-failure';
 import { EchoCave } from '../../index';
 import { parseUserIds } from '../../utils/msg/element-helper';
@@ -32,7 +33,7 @@ async function getCaveIdsByField(
     }
 
     const caves = await ctx.database.get(
-        'echo_cave_v2',
+        ACTIVE_CAVE_TABLE,
         {
             [field]: session.userId,
             channelId: session.channelId,
@@ -49,9 +50,9 @@ async function getCaveIdsByField(
 
 async function incrementDrawCount(ctx: Context, caveMsg: EchoCave) {
     await ctx.database.set(
-        'echo_cave_v2',
+        ACTIVE_CAVE_TABLE,
         {
-            id: caveMsg.id,
+            entryId: caveMsg.entryId,
             channelId: caveMsg.channelId,
         },
         {
@@ -96,7 +97,7 @@ async function getTargetedUserCave(
         return session.text('echo-cave.user.userNotInGroup');
     }
 
-    const caves = await ctx.database.get('echo_cave_v2', {
+    const caves = await ctx.database.get(ACTIVE_CAVE_TABLE, {
         channelId: session.channelId,
     });
 
@@ -130,7 +131,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, targe
     const { channelId } = session;
 
     if (!target) {
-        const caves = await ctx.database.get('echo_cave_v2', {
+        const caves = await ctx.database.get(ACTIVE_CAVE_TABLE, {
             channelId,
         });
 
@@ -151,7 +152,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, targe
         const isExactNumericTarget = /^\d+$/.test(trimmedTarget);
         if (isExactNumericTarget) {
             const id = Number(trimmedTarget);
-            const caves = await ctx.database.get('echo_cave_v2', {
+            const caves = await ctx.database.get(ACTIVE_CAVE_TABLE, {
                 id,
                 channelId,
             });

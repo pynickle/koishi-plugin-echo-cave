@@ -1,5 +1,6 @@
 import { getUserName } from '../../adapters/onebot/user';
 import { Config } from '../../config/config';
+import { ACTIVE_CAVE_TABLE } from '../cave-store';
 import { EchoCave } from '../../index';
 import { getCaveMaintenanceMessage } from './admin';
 import { createTextMsgNode } from '../../utils/msg/cqcode-helper';
@@ -41,7 +42,12 @@ function parseCustomTime(timeStr: string): number | null {
     const unitOrder = ['m', 'w', 'd', 'h'];
     let lastIndex = -1;
 
-    while ((match = regex.exec(s)) !== null) {
+    while (true) {
+        match = regex.exec(s);
+        if (match === null) {
+            break;
+        }
+
         const value = parseInt(match[1], 10);
         const unit = match[2].toLowerCase();
 
@@ -92,12 +98,14 @@ function getStartTime(period: Period, customTimeMs?: number): Date {
             startTime.setHours(0, 0, 0, 0);
             break;
         case 'week':
+        {
             // Start of this week (Monday 00:00:00)
             const dayOfWeek = now.getDay();
             const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
             startTime.setDate(now.getDate() - daysToMonday);
             startTime.setHours(0, 0, 0, 0);
             break;
+        }
         case 'month':
             // Start of this month (1st day 00:00:00)
             startTime.setDate(1);
@@ -223,7 +231,7 @@ export async function getRanking(
     const topCount = cfg.rankingTopCount || 10;
 
     // Query all cave records within the specified period
-    const caves = (await ctx.database.get('echo_cave_v2', {
+    const caves = (await ctx.database.get(ACTIVE_CAVE_TABLE, {
         channelId,
         createTime: {
             $gte: startTime,

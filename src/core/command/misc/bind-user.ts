@@ -1,3 +1,4 @@
+import { ACTIVE_CAVE_TABLE, getCaveByPublicId } from '../../cave-store';
 import { checkUsersInGroup } from '../../../adapters/onebot/user';
 import { getCaveMaintenanceMessage } from '../admin';
 import { parseUserIds } from '../../../utils/msg/element-helper';
@@ -38,8 +39,8 @@ export async function bindUsersToCave(
     }
 
     // Check if cave exists
-    const caves = await ctx.database.get('echo_cave_v2', id);
-    if (caves.length === 0) {
+    const cave = await getCaveByPublicId(ctx, id, session.channelId);
+    if (!cave) {
         return session.text('echo-cave.general.noMsgWithId');
     }
 
@@ -50,7 +51,7 @@ export async function bindUsersToCave(
     }
 
     // Update cave with new related users (direct modification)
-    await ctx.database.set('echo_cave_v2', id, {
+    await ctx.database.set(ACTIVE_CAVE_TABLE, { entryId: cave.entryId }, {
         relatedUsers: parsedUserIds,
     });
 

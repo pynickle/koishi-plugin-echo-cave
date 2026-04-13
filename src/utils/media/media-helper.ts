@@ -1,4 +1,12 @@
 import { Config } from '../../config/config';
+import {
+    createCaveRecord,
+    getAllCaves,
+    getCavesByChannel,
+    getNextCavePublicId,
+    removeCaveByEntryId,
+    updateCaveByEntryId,
+} from '../../core/cave-store';
 import axios from 'axios';
 import {
     CopyObjectCommand,
@@ -82,6 +90,7 @@ interface CaveMediaRefs {
 }
 
 interface StoredCaveMediaRecord {
+    entryId?: number;
     id: number;
     content: string;
 }
@@ -1055,7 +1064,7 @@ async function collectCavesReferencingFiles(
     targetPaths: string[]
 ): Promise<StoredCaveMediaRecord[]> {
     const targetSet = new Set(targetPaths.map((filePath) => normalizePathForComparison(filePath)));
-    const caves = await ctx.database.get('echo_cave_v2', {});
+    const caves = await getAllCaves(ctx);
     const matched: StoredCaveMediaRecord[] = [];
 
     for (const cave of caves) {
@@ -1088,7 +1097,11 @@ async function deleteCavesForOversizedMedia(
     for (const cave of caves) {
         try {
             await deleteMediaFilesFromMessage(ctx, cave.content, cfg);
-            await ctx.database.remove('echo_cave_v2', cave.id);
+            if (typeof cave.entryId !== 'number') {
+                throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+            }
+
+            await removeCaveByEntryId(ctx, cave.entryId);
             ctx.logger.info(`Deleted cave #${cave.id} because its media exceeded the size limit.`);
         } catch (error) {
             ctx.logger.warn(`Failed to delete cave #${cave.id} during oversized media cleanup: ${error}`);
@@ -1100,7 +1113,7 @@ export async function inspectCaveMediaRefs(
     ctx: Context,
     shouldInclude?: (caveId: number) => boolean
 ): Promise<CaveMediaRefs[]> {
-    const caves = await ctx.database.get('echo_cave_v2', {});
+    const caves = await getAllCaves(ctx);
     const results: CaveMediaRefs[] = [];
 
     for (const cave of caves) {
@@ -1198,7 +1211,7 @@ async function runTransferPlans(plans: MediaTransferPlan[], phase: 'commit' | 'r
 }
 
 async function walkDirectories(rootDir: string): Promise<string[]> {
-    let entries;
+    let entries: import('node:fs').Dirent[];
     try {
         entries = await fs.readdir(rootDir, { withFileTypes: true });
     } catch (error) {
@@ -1606,7 +1619,7 @@ export async function deleteMediaFilesFromMessage(ctx: Context, content: string,
 }
 
 export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
-    const caves = await ctx.database.get('echo_cave_v2', {});
+    const caves = await getAllCaves(ctx);
     const stats = createEmptyStats();
     const state: MutationState = {
         transferPlans: new Map(),
@@ -1629,7 +1642,11 @@ export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
             );
 
             if (rewritten.content !== cave.content) {
-                await ctx.database.set('echo_cave_v2', cave.id, { content: rewritten.content });
+                if (typeof cave.entryId !== 'number') {
+                    throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+                }
+
+                await updateCaveByEntryId(ctx, cave.entryId, { content: rewritten.content });
                 await runTransferPlans(rewritten.plans, 'commit');
             }
         } catch (error) {
@@ -1654,7 +1671,7 @@ export async function migrateLocalMediaToS3(
     keepLocal: boolean,
     createHooks?: (caveId: number) => RewriteHooks
 ) {
-    const caves = await ctx.database.get('echo_cave_v2', {});
+    const caves = await getAllCaves(ctx);
     const stats = createEmptyStats();
     const state: MutationState = {
         transferPlans: new Map(),
@@ -1679,7 +1696,11 @@ export async function migrateLocalMediaToS3(
             );
 
             if (rewritten.content !== cave.content) {
-                await ctx.database.set('echo_cave_v2', cave.id, { content: rewritten.content });
+                if (typeof cave.entryId !== 'number') {
+                    throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+                }
+
+                await updateCaveByEntryId(ctx, cave.entryId, { content: rewritten.content });
                 await runTransferPlans(rewritten.plans, 'commit');
                 await hooks?.onMigrationCommitted?.();
             }
@@ -1706,7 +1727,7 @@ export async function mergeChannelCaves(
     targetChannelId: string,
     keepSource: boolean
 ) {
-    const sourceCaves = await ctx.database.get('echo_cave_v2', { channelId: sourceChannelId });
+    const sourceCaves = await getCavesByChannel(ctx, sourceChannelId);
     const targetMode = getStorageMode(cfg);
     const transferMode: MediaTransferMode = keepSource ? 'copy' : 'move';
     const stats = createEmptyStats();
@@ -1731,7 +1752,10 @@ export async function mergeChannelCaves(
             );
 
             if (keepSource) {
-                await ctx.database.create('echo_cave_v2', {
+                const nextId = await getNextCavePublicId(ctx);
+
+                await createCaveRecord(ctx, {
+                    id: nextId,
                     channelId: targetChannelId,
                     createTime: cave.createTime,
                     userId: cave.userId,
@@ -1742,7 +1766,11 @@ export async function mergeChannelCaves(
                     drawCount: cave.drawCount,
                 });
             } else {
-                await ctx.database.set('echo_cave_v2', cave.id, {
+                if (typeof cave.entryId !== 'number') {
+                    throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+                }
+
+                await updateCaveByEntryId(ctx, cave.entryId, {
                     channelId: targetChannelId,
                     content: rewritten.content,
                 });

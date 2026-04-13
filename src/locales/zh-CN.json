@@ -208,16 +208,16 @@
       }
     },
     "cave.admin.reindex": {
-      "description": "重排所有回声洞 ID，使现有记录重新连续编号",
+      "description": "重排所有回声洞 public ID，使现有记录重新连续编号而不改动内部主键",
       "messages": {
         "noCaves": "🔍 当前没有任何回声洞记录可供重排。",
         "alreadySequential": "✅ 当前所有回声洞 ID 已经连续，无需重排。",
         "backupWriteFailed": "❌ 回声洞 ID 重排前的备份写入失败，操作已终止。错误：{error}",
-        "confirmSummary": "⚠️ 即将执行回声洞 ID 重排\n当前记录数：{caveCount}\n当前最大 ID：{currentMaxId}\n重排后最大 ID：{nextMaxId}\n备份文件：{backupPath}\n\n本次操作会先写入完整备份，再按安全顺序重排 ID。执行期间会临时锁定回声洞相关命令。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
+        "confirmSummary": "⚠️ 即将执行回声洞 public ID 重排\n当前记录数：{caveCount}\n当前最大 ID：{currentMaxId}\n重排后最大 ID：{nextMaxId}\n备份文件：{backupPath}\n\n本次操作会先写入完整备份，再仅重排对外展示的 public ID，不改动数据库内部主键。执行期间会临时锁定回声洞相关命令。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次回声洞 ID 重排。",
         "confirmTimeout": "⌛ 二次确认超时，回声洞 ID 重排未执行。",
-        "reindexDone": "✅ 回声洞 ID 重排完成，共处理 {caveCount} 条记录。备份文件：{backupPath}",
+        "reindexDone": "✅ 回声洞 public ID 重排完成，共处理 {caveCount} 条记录。备份文件：{backupPath}",
         "reindexFailed": "❌ 回声洞 ID 重排失败，已停止继续写入。可使用 cave.admin.restore-reindex 恢复备份：{backupPath}\n错误：{error}"
       }
     },

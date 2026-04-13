@@ -1,4 +1,5 @@
 import { Config } from './config/config';
+import { ACTIVE_CAVE_TABLE, CaveSnapshotRecord } from './core/cave-store';
 import { addCave } from './core/command/add-cave';
 import {
     inspectMediaRefsForMigration,
@@ -6,6 +7,7 @@ import {
     migrateLegacyLocalMedia,
     migrateMediaToS3,
     reindexCaveIds,
+    registerAutoReindexScheduler,
     restoreReindexBackup,
 } from './core/command/admin';
 import { deleteCave, deleteCaves } from './core/command/delete-cave';
@@ -24,6 +26,7 @@ export const inject = ['database'];
 export * from './config/config';
 
 export interface EchoCave {
+    entryId?: number;
     id: number;
     channelId: string;
     createTime: Date;
@@ -55,9 +58,24 @@ declare module 'koishi' {
     interface Tables {
         echo_cave: EchoCave;
         echo_cave_v2: EchoCave;
+        echo_cave_v3: EchoCave;
         echo_cave_send_failure: EchoCaveSendFailure;
         echo_cave_user_state: EchoCaveUserState;
     }
+}
+
+function toV3Record(record: CaveSnapshotRecord) {
+    return {
+        id: record.id,
+        channelId: record.channelId,
+        createTime: new Date(record.createTime),
+        userId: record.userId,
+        originUserId: record.originUserId,
+        type: record.type,
+        content: record.content,
+        relatedUsers: [...record.relatedUsers],
+        drawCount: record.drawCount,
+    };
 }
 
 export function apply(ctx: Context, cfg: Config) {
@@ -79,6 +97,27 @@ export function apply(ctx: Context, cfg: Config) {
         {
             primary: 'id',
             autoInc: true,
+        }
+    );
+
+    ctx.model.extend(
+        ACTIVE_CAVE_TABLE,
+        {
+            entryId: 'unsigned',
+            id: 'unsigned',
+            channelId: 'string',
+            createTime: 'timestamp',
+            userId: 'string',
+            originUserId: 'string',
+            type: 'string',
+            content: 'text',
+            relatedUsers: 'list',
+            drawCount: { type: 'unsigned', initial: 0 },
+        },
+        {
+            primary: 'entryId',
+            autoInc: true,
+            unique: ['id'],
         }
     );
 
@@ -138,6 +177,24 @@ export function apply(ctx: Context, cfg: Config) {
         async (database) => {
             const data = await database.get('echo_cave', {});
             await database.upsert('echo_cave_v2', data);
+        }
+    );
+
+    ctx.model.migrate(
+        'echo_cave_v2',
+        {
+            entryId: 'unsigned',
+        },
+        async (database) => {
+            const existing = await database.get(ACTIVE_CAVE_TABLE, {});
+            if (existing.length > 0) {
+                return;
+            }
+
+            const data = (await database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+            for (const record of data) {
+                await database.create(ACTIVE_CAVE_TABLE, toV3Record(record));
+            }
         }
     );
 
@@ -217,4 +274,5 @@ export function apply(ctx: Context, cfg: Config) {
     );
 
     registerSendFailureSummaryScheduler(ctx, cfg);
+    registerAutoReindexScheduler(ctx, cfg);
 }

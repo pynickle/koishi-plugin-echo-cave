@@ -1,4 +1,17 @@
 import { Config } from '../../config/config';
+import {
+    ACTIVE_CAVE_TABLE,
+    CaveBackupRecord,
+    CaveSnapshotRecord,
+    createCaveRecord,
+    getAllCaves,
+    getCavesByChannel,
+    getNextCavePublicId,
+    removeCaveByEntryId,
+    toCaveBackupRecord,
+    toCaveSnapshotRecord,
+    updateCaveByEntryId,
+} from '../cave-store';
 import { EchoCave } from '../../index';
 import {
     MediaType,
@@ -28,8 +41,13 @@ interface ReindexPlanItem {
 
 interface ReindexBackupPayload {
     createdAt: string;
-    records: EchoCave[];
+    records: CaveBackupRecord[];
     mapping: ReindexPlanItem[];
+}
+
+interface DailyTime {
+    hour: number;
+    minute: number;
 }
 
 function cloneCaveRecord(cave: EchoCave, id: number): EchoCave {
@@ -41,13 +59,9 @@ function cloneCaveRecord(cave: EchoCave, id: number): EchoCave {
     };
 }
 
-function getCaveIdList(caves: EchoCave[]): number[] {
-    return caves.map((cave) => cave.id);
-}
-
-async function removeCavesByIds(ctx: Context, ids: number[]) {
-    for (const id of ids) {
-        await ctx.database.remove('echo_cave_v2', id);
+async function removeCavesByEntryIds(ctx: Context, entryIds: number[]) {
+    for (const entryId of entryIds) {
+        await removeCaveByEntryId(ctx, entryId);
     }
 }
 
@@ -56,39 +70,39 @@ async function upsertCaves(ctx: Context, caves: EchoCave[]) {
         return;
     }
 
-    await ctx.database.upsert('echo_cave_v2', caves);
-}
+    for (const cave of caves) {
+        if (typeof cave.entryId === 'number') {
+            await ctx.database.upsert(ACTIVE_CAVE_TABLE, [cave], 'entryId');
+            continue;
+        }
 
-function buildTemporarySnapshot(currentCaves: EchoCave[], nextCaves: EchoCave[]) {
-    const currentMaxId = currentCaves.reduce((currentMax, cave) => Math.max(currentMax, cave.id), 0);
-    const nextMaxId = nextCaves.reduce((currentMax, cave) => Math.max(currentMax, cave.id), 0);
-    const offset = Math.max(currentMaxId, nextMaxId) + currentCaves.length + nextCaves.length + REINDEX_SPECIAL_OFFSET;
-
-    return currentCaves.map((cave) => cloneCaveRecord(cave, cave.id + offset));
+        await createCaveRecord(ctx, toCaveSnapshotRecord(cave));
+    }
 }
 
 async function rollbackCaveReplacement(
     ctx: Context,
     currentCaves: EchoCave[],
-    nextCaves: EchoCave[],
-    tempCaves: EchoCave[]
+    nextCaves: EchoCave[]
 ) {
-    const idsToRemove = [...new Set([...getCaveIdList(nextCaves), ...getCaveIdList(tempCaves)])];
+    const nextEntryIds = nextCaves
+        .map((cave) => cave.entryId)
+        .filter((entryId): entryId is number => typeof entryId === 'number');
 
-    await removeCavesByIds(ctx, idsToRemove);
+    await removeCavesByEntryIds(ctx, nextEntryIds);
     await upsertCaves(ctx, currentCaves);
 }
 
 async function replaceCaveSnapshot(ctx: Context, currentCaves: EchoCave[], nextCaves: EchoCave[]) {
-    const tempCaves = buildTemporarySnapshot(currentCaves, nextCaves);
-
     try {
-        await upsertCaves(ctx, tempCaves);
-        await removeCavesByIds(ctx, getCaveIdList(currentCaves));
+        const currentEntryIds = currentCaves
+            .map((cave) => cave.entryId)
+            .filter((entryId): entryId is number => typeof entryId === 'number');
+
+        await removeCavesByEntryIds(ctx, currentEntryIds);
         await upsertCaves(ctx, nextCaves);
-        await removeCavesByIds(ctx, getCaveIdList(tempCaves));
     } catch (error) {
-        await rollbackCaveReplacement(ctx, currentCaves, nextCaves, tempCaves);
+        await rollbackCaveReplacement(ctx, currentCaves, nextCaves);
         throw error;
     }
 }
@@ -110,6 +124,13 @@ function normalizeCaveRecord(cave: EchoCave) {
         relatedUsers: [...cave.relatedUsers],
         type: cave.type,
         userId: cave.userId,
+    };
+}
+
+function normalizeBackupRecord(cave: CaveBackupRecord) {
+    return {
+        ...normalizeCaveRecord(cave as EchoCave),
+        entryId: cave.entryId,
     };
 }
 
@@ -136,6 +157,15 @@ function isEchoCaveRecord(value: unknown): value is EchoCave {
     );
 }
 
+function isCaveBackupRecord(value: unknown): value is CaveBackupRecord {
+    if (!isEchoCaveRecord(value)) {
+        return false;
+    }
+
+    return typeof (value as { entryId?: unknown }).entryId === 'number' ||
+        typeof (value as { entryId?: unknown }).entryId === 'undefined';
+}
+
 function isReindexPlanItem(value: unknown): value is ReindexPlanItem {
     if (!isRecordObject(value)) {
         return false;
@@ -158,7 +188,7 @@ function parseReindexBackupPayload(content: string): ReindexBackupPayload {
         throw new Error('invalid_backup_created_at');
     }
 
-    if (!Array.isArray(parsed.records) || !parsed.records.every((record) => isEchoCaveRecord(record))) {
+    if (!Array.isArray(parsed.records) || !parsed.records.every((record) => isCaveBackupRecord(record))) {
         throw new Error('invalid_backup_records');
     }
 
@@ -169,7 +199,10 @@ function parseReindexBackupPayload(content: string): ReindexBackupPayload {
     return {
         createdAt: parsed.createdAt,
         mapping: parsed.mapping,
-        records: parsed.records.map((record) => cloneCaveRecord(record, record.id)),
+        records: parsed.records.map((record) => ({
+            ...toCaveBackupRecord(record),
+            createTime: new Date(record.createTime),
+        })),
     };
 }
 
@@ -183,6 +216,34 @@ export function getCaveMaintenanceMessage(session: Session): string | null {
 
 function setCaveMaintenanceLock(value: boolean) {
     caveMaintenanceLock = value;
+}
+
+function parseDailyTime(value: string): DailyTime | null {
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+        return null;
+    }
+
+    return { hour, minute };
+}
+
+function getDelayUntilNextRun(time: DailyTime) {
+    const now = new Date();
+    const nextRun = new Date(now);
+    nextRun.setSeconds(0, 0);
+    nextRun.setHours(time.hour, time.minute, 0, 0);
+
+    if (nextRun.getTime() <= now.getTime()) {
+        nextRun.setDate(nextRun.getDate() + 1);
+    }
+
+    return nextRun.getTime() - now.getTime();
 }
 
 function ensureAdminPrivateAccess(session: Session, cfg: Config): string | null {
@@ -391,12 +452,12 @@ export async function mergeCavesBetweenChannels(
         return session.text('commands.cave.admin.merge.messages.sameChannel');
     }
 
-    const sourceCaves = await ctx.database.get('echo_cave_v2', { channelId: sourceChannelId });
+    const sourceCaves = await getCavesByChannel(ctx, sourceChannelId);
     if (sourceCaves.length === 0) {
         return session.text('commands.cave.admin.merge.messages.noSourceCaves');
     }
 
-    const targetCaves = await ctx.database.get('echo_cave_v2', { channelId: targetChannelId });
+    const targetCaves = await getCavesByChannel(ctx, targetChannelId);
     const confirmed = await requestSecondConfirmation(
         ctx,
         session,
@@ -577,7 +638,7 @@ async function writeReindexBackup(
     const backupPath = path.join(backupDir, `echo-cave-reindex-${timestamp}.json`);
     const payload: ReindexBackupPayload = {
         createdAt: new Date().toISOString(),
-        records: caves,
+        records: caves.map((cave) => toCaveBackupRecord(cave)),
         mapping,
     };
 
@@ -591,7 +652,7 @@ async function applyReindexPlan(ctx: Context, originalCaves: EchoCave[]) {
 }
 
 async function verifyCaveSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
-    const actualCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+    const actualCaves = (await getAllCaves(ctx)).sort((a, b) => a.id - b.id);
     const normalizedExpected = [...expectedCaves].sort((a, b) => a.id - b.id).map(normalizeCaveRecord);
     const normalizedActual = actualCaves.map(normalizeCaveRecord);
 
@@ -614,8 +675,8 @@ async function verifyCaveSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
 }
 
 async function verifyRestoredSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
-    const actualCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
-    const normalizedExpected = [...expectedCaves].sort((a, b) => a.id - b.id).map(normalizeCaveRecord);
+    const actualCaves = (await getAllCaves(ctx)).sort((a, b) => a.id - b.id);
+    const normalizedExpected = [...expectedCaves].sort((a, b) => a.id - b.id).map(normalizeBackupRecord);
     const normalizedActual = actualCaves.map(normalizeCaveRecord);
 
     if (normalizedActual.length !== normalizedExpected.length) {
@@ -642,7 +703,7 @@ export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config
         return session.text('echo-cave.general.adminPermissionDenied');
     }
 
-    const caves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+    const caves = (await getAllCaves(ctx)).sort((a, b) => a.id - b.id);
     if (caves.length === 0) {
         return session.text('commands.cave.admin.reindex.messages.noCaves');
     }
@@ -683,7 +744,14 @@ export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config
     setCaveMaintenanceLock(true);
     try {
         const reindexedCaves = buildSequentialCaveSnapshot(caves);
-        await applyReindexPlan(ctx, caves);
+        for (const cave of reindexedCaves) {
+            if (typeof cave.entryId !== 'number') {
+                throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+            }
+
+            await updateCaveByEntryId(ctx, cave.entryId, { id: cave.id });
+        }
+
         await verifyCaveSnapshot(ctx, reindexedCaves);
         return session.text('commands.cave.admin.reindex.messages.reindexDone', {
             caveCount: caves.length,
@@ -729,7 +797,7 @@ export async function restoreReindexBackup(
         });
     }
 
-    const currentCaves = (await ctx.database.get('echo_cave_v2', {})).sort((a, b) => a.id - b.id);
+    const currentCaves = (await getAllCaves(ctx)).sort((a, b) => a.id - b.id);
     const confirmed = await requestSecondConfirmation(
         ctx,
         session,
@@ -750,7 +818,11 @@ export async function restoreReindexBackup(
 
     setCaveMaintenanceLock(true);
     try {
-        await replaceCaveSnapshot(ctx, currentCaves, backup.records);
+        const restoreRecords = backup.records.map((record) => ({
+            ...toCaveSnapshotRecord(record),
+            entryId: record.entryId,
+        }));
+        await replaceCaveSnapshot(ctx, currentCaves, restoreRecords);
         await verifyRestoredSnapshot(ctx, backup.records);
         return session.text('commands.cave.admin.restore-reindex.messages.restoreDone', {
             backupPath,
@@ -765,4 +837,72 @@ export async function restoreReindexBackup(
     } finally {
         setCaveMaintenanceLock(false);
     }
+}
+
+async function runScheduledReindex(ctx: Context, cfg: Config) {
+    if (caveMaintenanceLock) {
+        ctx.logger.warn('Skipped scheduled cave reindex because another maintenance task is running.');
+        return;
+    }
+
+    const caves = (await getAllCaves(ctx)).sort((a, b) => a.id - b.id);
+    if (caves.length === 0) {
+        ctx.logger.info('Skipped scheduled cave reindex because there are no cave records.');
+        return;
+    }
+
+    const plan = buildReindexPlan(caves);
+    if (!hasIdGaps(plan)) {
+        ctx.logger.info('Skipped scheduled cave reindex because IDs are already sequential.');
+        return;
+    }
+
+    const backupPath = await writeReindexBackup(path.resolve(process.cwd(), 'logs'), caves, plan);
+    setCaveMaintenanceLock(true);
+    try {
+        const reindexedCaves = buildSequentialCaveSnapshot(caves);
+        for (const cave of reindexedCaves) {
+            if (typeof cave.entryId !== 'number') {
+                throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+            }
+
+            await updateCaveByEntryId(ctx, cave.entryId, { id: cave.id });
+        }
+
+        await verifyCaveSnapshot(ctx, reindexedCaves);
+        ctx.logger.info(
+            `Scheduled cave reindex completed. Processed ${caves.length} records. Backup: ${backupPath}`
+        );
+    } finally {
+        setCaveMaintenanceLock(false);
+    }
+}
+
+function scheduleNextAutoReindex(ctx: Context, cfg: Config) {
+    const parsedTime = parseDailyTime(cfg.autoReindexTime || '00:00');
+    if (!parsedTime) {
+        ctx.logger.warn(`Invalid autoReindexTime: ${cfg.autoReindexTime}. Expected HH:mm.`);
+        return;
+    }
+
+    const delay = getDelayUntilNextRun(parsedTime);
+    ctx.setTimeout(async () => {
+        try {
+            await runScheduledReindex(ctx, cfg);
+        } catch (error) {
+            ctx.logger.error(`Failed to run scheduled cave reindex: ${error}`);
+        }
+
+        scheduleNextAutoReindex(ctx, cfg);
+    }, delay);
+}
+
+export function registerAutoReindexScheduler(ctx: Context, cfg: Config) {
+    if (!cfg.enableAutoReindex) {
+        return;
+    }
+
+    ctx.on('ready', () => {
+        scheduleNextAutoReindex(ctx, cfg);
+    });
 }

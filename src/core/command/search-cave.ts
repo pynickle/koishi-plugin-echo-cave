@@ -1,3 +1,4 @@
+import { ACTIVE_CAVE_TABLE } from '../cave-store';
 import { checkUsersInGroup, getUserName } from '../../adapters/onebot/user';
 import { getCaveMaintenanceMessage } from './admin';
 import { parseUserIds } from '../../utils/msg/element-helper';
@@ -37,7 +38,7 @@ export async function searchCave(ctx: Context, session: Session, userIds: string
     const targetUserId = parsedUserIds[0];
     const { channelId } = session;
 
-    const caves = await ctx.database.get('echo_cave_v2', {
+    const caves = await ctx.database.get(ACTIVE_CAVE_TABLE, {
         channelId,
     });
 

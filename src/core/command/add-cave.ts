@@ -1,5 +1,6 @@
 import { checkUsersInGroup, getUserName } from '../../adapters/onebot/user';
 import { Config } from '../../config/config';
+import { ACTIVE_CAVE_TABLE, getNextCavePublicId } from '../cave-store';
 import { messageContainsMedia, processStoredMessageMedia } from '../../utils/media/media-helper';
 import { parseUserIds } from '../../utils/msg/element-helper';
 import {
@@ -190,7 +191,9 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
     );
 
     try {
-        const result = await ctx.database.create('echo_cave_v2', {
+        const nextId = await getNextCavePublicId(ctx);
+        const result = await ctx.database.create(ACTIVE_CAVE_TABLE, {
+            id: nextId,
             channelId,
             createTime: new Date(),
             userId,

@@ -29,5 +29,7 @@
   "s3PresignExpiresIn": "S3 私有对象预签名 URL 的有效期 (秒)",
   "sendFailureHandlingMode": "回声洞发送失败后的处理方式：自动删除、按日汇总上报或不额外处理",
   "sendFailureSummaryAdminId": "发送失败日报的单独管理员 ID（不复用管理员 ID 列表）",
-  "sendFailureSummaryTime": "发送失败日报的每日发送时间，格式为 HH:mm"
+  "sendFailureSummaryTime": "发送失败日报的每日发送时间，格式为 HH:mm",
+  "enableAutoReindex": "是否启用回声洞数据库自动重整，开启后会在每日指定时间自动补齐 public ID 间隙并写入日志",
+  "autoReindexTime": "回声洞数据库自动重整的每日执行时间，格式为 HH:mm"
 }

@@ -1,4 +1,5 @@
 import { Config } from '../../config/config';
+import { getCaveByPublicId, getCavesByPublicIds, removeCaveByEntryId } from '../cave-store';
 import { EchoCave } from '../../index';
 import { getCaveMaintenanceMessage } from './admin';
 import { deleteMediaFilesFromMessage } from '../../utils/media/media-helper';
@@ -64,7 +65,11 @@ export async function deleteStoredCave(ctx: Context, cfg: Config, caveMsg: EchoC
         await deleteMediaFilesFromMessage(ctx, caveMsg.content, cfg);
     }
 
-    await ctx.database.remove('echo_cave_v2', caveMsg.id);
+    if (typeof caveMsg.entryId !== 'number') {
+        throw new Error(`missing_entry_id_for_cave_${caveMsg.id}`);
+    }
+
+    await removeCaveByEntryId(ctx, caveMsg.entryId);
 }
 
 export async function deleteCave(ctx: Context, session: Session, cfg: Config, id: number) {
@@ -82,13 +87,13 @@ export async function deleteCave(ctx: Context, session: Session, cfg: Config, id
         return session.text('.noIdProvided');
     }
 
-    const caves = await ctx.database.get('echo_cave_v2', id);
+    const cave = await getCaveByPublicId(ctx, id, session.channelId);
 
-    if (caves.length === 0) {
+    if (!cave) {
         return session.text('echo-cave.general.noMsgWithId');
     }
 
-    const caveMsg = caves[0];
+    const caveMsg = cave;
     const actor = await getDeleteActor(ctx, session);
     const permissionFailure = await getDeletePermissionFailure(ctx, session, cfg, caveMsg, actor);
     if (permissionFailure) {
@@ -117,7 +122,7 @@ export async function deleteCaves(ctx: Context, session: Session, cfg: Config, i
     const failedIds: number[] = [];
     const actor = await getDeleteActor(ctx, session);
 
-    const caves = await ctx.database.get('echo_cave_v2', ids);
+    const caves = (await getCavesByPublicIds(ctx, ids)).filter((cave) => cave.channelId === session.channelId);
     for (const cave of caves) {
         const permissionFailure = await getDeletePermissionFailure(ctx, session, cfg, cave, actor);
         if (permissionFailure) {

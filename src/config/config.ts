@@ -37,6 +37,8 @@ export interface Config {
     sendFailureSummaryAdminId?: string;
     sendFailureSummaryTime?: string;
     oversizedMediaCleanupMode?: OversizedMediaCleanupMode;
+    enableAutoReindex?: boolean;
+    autoReindexTime?: string;
 }
 
 export const Config: Schema<Config> = Schema.intersect([
@@ -81,6 +83,10 @@ export const Config: Schema<Config> = Schema.intersect([
         sendFailureSummaryAdminId: Schema.string().default(''),
         sendFailureSummaryTime: Schema.string().default('09:00'),
     }).description('发送失败处理'),
+    Schema.object({
+        enableAutoReindex: Schema.boolean().default(false),
+        autoReindexTime: Schema.string().default('00:00'),
+    }).description('自动维护'),
 ]).i18n({
     'zh-CN': zhCN,
 });

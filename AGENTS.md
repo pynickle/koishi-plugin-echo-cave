@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-31 Asia/Shanghai
-**Commit:** 4836201
+**Generated:** 2026-04-12 Asia/Shanghai
+**Commit:** 8d8a9f2
 **Branch:** master
 
 ## OVERVIEW
@@ -12,10 +12,10 @@ Koishi plugin for storing, retrieving, ranking, and administrating group chat "e
 ./
 ├── src/               # source of truth; edit here, not in lib/
 │   ├── index.ts       # plugin entry, table declarations, command registration
-│   ├── config/        # Koishi schema + config i18n
+│   ├── config/        # Koishi schema + config i18n labels
 │   ├── core/          # command flows, parsing, formatting, send-failure handling
 │   ├── adapters/      # OneBot-specific user helpers
-│   ├── utils/         # media and message helpers
+│   ├── utils/         # media storage + message/listener helpers
 │   └── locales/       # plugin locale strings
 ├── lib/               # build output
 ├── .github/workflows/ # release-only CI
@@ -27,6 +27,7 @@ Koishi plugin for storing, retrieving, ranking, and administrating group chat "e
 |------|----------|-------|
 | Add or register a command | `src/index.ts`, `src/core/command/` | `index.ts` wires commands; handlers live below |
 | Change plugin config | `src/config/config.ts`, `src/config/locales/zh-CN.json` | schema + config labels stay aligned |
+| Change prompt/listener or mention parsing helpers | `src/utils/msg/` | `listenForUserMessage()` owns interactive prompts; `parseUserIds()` owns mention parsing |
 | Debug media save/send/migration | `src/utils/media/media-helper.ts` | local/S3, cleanup, migration, URI rewriting |
 | Change user/group checks | `src/adapters/onebot/user.ts` | membership and display-name resolution |
 | Adjust forward/quoted message parsing | `src/core/parser/` | `forward-parser.ts` and `msg-parser.ts` split responsibilities |
@@ -41,6 +42,7 @@ Koishi plugin for storing, retrieving, ranking, and administrating group chat "e
 | `apply()` | entry | `src/index.ts` | root entry | declares tables and binds all commands |
 | `Config` / `Config` schema | config hub | `src/config/config.ts` | 11 imports | central plugin contract |
 | `media-helper.ts` | utility hub | `src/utils/media/media-helper.ts` | 6 imports | media processing, storage, migration |
+| `listenForUserMessage()` | helper flow | `src/utils/msg/message-listener.ts` | prompt/listener utility | interactive admin and selection prompts with silent cleanup |
 | `user.ts` | adapter hub | `src/adapters/onebot/user.ts` | 6 imports | OneBot-specific user lookup and validation |
 | `addCave()` | command flow | `src/core/command/add-cave.ts` | command entry | quote capture, media processing, user selection |
 | `getCave()` | command flow | `src/core/command/get-cave.ts` | command entry | weighted random retrieval + draw count |
@@ -54,6 +56,7 @@ Koishi plugin for storing, retrieving, ranking, and administrating group chat "e
 - TypeScript is not strict (`strict: false`), so preserve existing runtime guards instead of assuming narrow types.
 - Package manager and CI both use pnpm, even though local scripts are npm-compatible.
 - Release flow expects conventional commit types from `.releaserc.json`, including custom `imp`.
+- Verification is lint/build driven: there are no tests, so `pnpm run lint` and `pnpm run build` are the real safety checks.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - Do not edit `lib/` directly.
@@ -62,6 +65,7 @@ Koishi plugin for storing, retrieving, ranking, and administrating group chat "e
 - Do not bypass quote requirements in `cave.echo`; the handler depends on `session.quote`.
 - Do not duplicate root guidance into child AGENTS files; child files should contain only local deltas.
 - Do not auto-format JSON locale files with Oxfmt assumptions; JSON is intentionally ignored.
+- Do not split config schema fields from their locale labels; `src/config/config.ts` and `src/config/locales/zh-CN.json` move together.
 
 ## UNIQUE STYLES
 - Command handlers return localized `session.text(...)` keys instead of inline prose.
@@ -86,4 +90,5 @@ pnpm run release
 ## NOTES
 - `src/utils/media/media-helper.ts` is the biggest hotspot in the repo; read existing helpers before adding new storage branches.
 - `src/core/command/` is the main business boundary; use its local AGENTS file for workflow-specific rules.
+- `src/utils/msg/` and `src/config/` now have local AGENTS files; prefer those before changing interactive helper flows or schema definitions.
 - `logs/` exists at repo root but is not part of the plugin source model.
