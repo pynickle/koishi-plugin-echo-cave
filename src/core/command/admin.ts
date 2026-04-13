@@ -2,11 +2,9 @@ import { Config } from '../../config/config';
 import {
     ACTIVE_CAVE_TABLE,
     CaveBackupRecord,
-    CaveSnapshotRecord,
     createCaveRecord,
     getAllCaves,
     getCavesByChannel,
-    getNextCavePublicId,
     removeCaveByEntryId,
     toCaveBackupRecord,
     toCaveSnapshotRecord,
@@ -635,8 +633,8 @@ function buildReindexPlan(caves: EchoCave[]): ReindexPlanItem[] {
     }));
 }
 
-function hasIdGaps(plan: ReindexPlanItem[]) {
-    return plan.some((item) => item.oldId !== item.newId);
+function hasSequentialPublicIds(caves: EchoCave[]) {
+    return caves.every((cave, index) => cave.id === index + 1);
 }
 
 async function writeReindexBackup(
@@ -725,7 +723,7 @@ export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config
     }
 
     const plan = buildReindexPlan(caves);
-    if (!hasIdGaps(plan)) {
+    if (hasSequentialPublicIds(caves)) {
         return session.text('commands.cave.admin.reindex.messages.alreadySequential');
     }
 
@@ -870,7 +868,7 @@ async function runScheduledReindex(ctx: Context, cfg: Config) {
     }
 
     const plan = buildReindexPlan(caves);
-    if (!hasIdGaps(plan)) {
+    if (hasSequentialPublicIds(caves)) {
         ctx.logger.info('Skipped scheduled cave reindex because IDs are already sequential.');
         return;
     }
