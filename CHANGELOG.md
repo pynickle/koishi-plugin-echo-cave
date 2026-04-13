@@ -1,3 +1,13 @@
+## [1.29.12](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.11...v1.29.12) (2026-04-13)
+
+### 🐛 Bug Fixes
+
+* fix migrate v3 error ([66253d6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/66253d6312348d0d571f3da6851b4dae8ec972e2))
+
+### 🔧 Miscellaneous Changes
+
+* update deps ([7b736ad](https://github.com/pynickle/koishi-plugin-echo-cave/commit/7b736adaad9011f6d5fabef5b89f25872f21b84f))
+
 ## [1.29.11](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.10...v1.29.11) (2026-04-13)
 
 ### 🐛 Bug Fixes
