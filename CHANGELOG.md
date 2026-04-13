@@ -1,3 +1,16 @@
+## [1.29.11](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.10...v1.29.11) (2026-04-13)
+
+### 🐛 Bug Fixes
+
+* fix reindex error ([8bfb100](https://github.com/pynickle/koishi-plugin-echo-cave/commit/8bfb10006ad289d3d4c3b0f4065c6e8267fd8ed8))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/client-s3 to ^3.1029.0 ([152a93e](https://github.com/pynickle/koishi-plugin-echo-cave/commit/152a93efb3c284bf780472f4b1f7a45735040cf4))
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1029.0 ([a418591](https://github.com/pynickle/koishi-plugin-echo-cave/commit/a418591ab9c396e93a7547d80ddd3dd90db64808))
+* **deps:** update pnpm/action-setup action to v6 ([86b75dd](https://github.com/pynickle/koishi-plugin-echo-cave/commit/86b75dd695eeebb05490f3bc1378425efc54d328))
+* downgrade pnpm action ([c313c14](https://github.com/pynickle/koishi-plugin-echo-cave/commit/c313c14ce126a2f215556b6a6f199965f622aad4))
+
 ## [1.29.10](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.9...v1.29.10) (2026-04-12)
 
 ### 🐛 Bug Fixes
