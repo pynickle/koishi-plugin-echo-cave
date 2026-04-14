@@ -36,6 +36,7 @@ export interface EchoCave {
   content: string;
   relatedUsers: string[];
   drawCount: number;
+  picDrawCount: number;
 }
 
 export interface EchoCaveSendFailure {
@@ -75,6 +76,7 @@ function toV3Record(record: CaveSnapshotRecord) {
     content: record.content,
     relatedUsers: [...record.relatedUsers],
     drawCount: record.drawCount,
+    picDrawCount: record.picDrawCount ?? 0,
   };
 }
 
@@ -93,6 +95,7 @@ export function apply(ctx: Context, cfg: Config) {
       content: 'text',
       relatedUsers: 'list',
       drawCount: { type: 'unsigned', initial: 0 },
+      picDrawCount: { type: 'unsigned', initial: 0 },
     },
     {
       primary: 'id',
@@ -113,6 +116,7 @@ export function apply(ctx: Context, cfg: Config) {
       content: 'text',
       relatedUsers: 'list',
       drawCount: { type: 'unsigned', initial: 0 },
+      picDrawCount: { type: 'unsigned', initial: 0 },
     },
     {
       primary: 'entryId',
@@ -133,6 +137,7 @@ export function apply(ctx: Context, cfg: Config) {
       content: 'text',
       relatedUsers: 'list',
       drawCount: { type: 'unsigned', initial: 0 },
+      picDrawCount: { type: 'unsigned', initial: 0 },
     },
     {
       primary: 'id',
@@ -196,6 +201,10 @@ export function apply(ctx: Context, cfg: Config) {
   ctx
     .command('cave [target:text]')
     .action(async ({ session }, target) => await getCave(ctx, session, cfg, target));
+
+  ctx
+    .command('cave.pic')
+    .action(async ({ session }) => await getCave(ctx, session, cfg, undefined, true));
 
   ctx.command('cave.listen').action(async ({ session }) => await getCaveListByUser(ctx, session));
 

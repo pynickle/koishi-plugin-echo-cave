@@ -203,6 +203,7 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
       type,
       content,
       relatedUsers: finalParsedUserIds,
+      picDrawCount: 0,
     });
 
     return session.text('.msgSaved', { id: result.id, relatedUsers: relatedUsersFormatted });

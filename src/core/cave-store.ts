@@ -13,6 +13,7 @@ export interface CaveSnapshotRecord {
   content: string;
   relatedUsers: string[];
   drawCount: number;
+  picDrawCount: number;
 }
 
 export interface CaveBackupRecord extends CaveSnapshotRecord {
@@ -30,6 +31,7 @@ export function toCaveSnapshotRecord<T extends CaveSnapshotRecord>(cave: T): Cav
     content: cave.content,
     relatedUsers: [...cave.relatedUsers],
     drawCount: cave.drawCount,
+    picDrawCount: cave.picDrawCount ?? 0,
   };
 }
 
@@ -76,6 +78,7 @@ export async function createCaveRecord(ctx: Context, cave: CaveSnapshotRecord) {
     content: cave.content,
     relatedUsers: [...cave.relatedUsers],
     drawCount: cave.drawCount,
+    picDrawCount: cave.picDrawCount ?? 0,
   });
 }
 

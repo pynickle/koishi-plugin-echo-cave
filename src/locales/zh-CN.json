@@ -53,6 +53,12 @@
         "failureSummaryDetail": "#{caveId}（群 {channelId}）失败 {count} 次，最近 {lastFailTime}，错误：{errorMessage}"
       }
     },
+    "cave.pic": {
+      "description": "随机获取一条包含图片的回声洞消息",
+      "messages": {
+        "noPicMsgInCave": "🖼️ 当前回声洞中暂无包含图片的消息，快使用 \"cave.echo\" 添加一条吧！"
+      }
+    },
     "cave.echo": {
       "description": "将消息存入回声洞",
       "messages": {

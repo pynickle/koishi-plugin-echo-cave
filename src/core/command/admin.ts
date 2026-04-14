@@ -117,6 +117,7 @@ function normalizeCaveRecord(cave: EchoCave) {
     content: cave.content,
     createTime: new Date(cave.createTime).toISOString(),
     drawCount: cave.drawCount,
+    picDrawCount: cave.picDrawCount ?? 0,
     id: cave.id,
     originUserId: cave.originUserId,
     relatedUsers: [...cave.relatedUsers],
@@ -153,7 +154,8 @@ function isEchoCaveRecord(value: unknown): value is EchoCave {
     typeof value.content === 'string' &&
     Array.isArray(value.relatedUsers) &&
     value.relatedUsers.every((user) => typeof user === 'string') &&
-    typeof value.drawCount === 'number'
+    typeof value.drawCount === 'number' &&
+    (typeof value.picDrawCount === 'number' || typeof value.picDrawCount === 'undefined')
   );
 }
 

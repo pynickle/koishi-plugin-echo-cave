@@ -1748,6 +1748,7 @@ export async function mergeChannelCaves(
           content: rewritten.content,
           relatedUsers: cave.relatedUsers,
           drawCount: cave.drawCount,
+          picDrawCount: cave.picDrawCount ?? 0,
         });
       } else {
         if (typeof cave.entryId !== 'number') {

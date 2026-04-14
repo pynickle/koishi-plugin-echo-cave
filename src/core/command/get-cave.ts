@@ -16,6 +16,8 @@ function formatCaveIdList(caves: Pick<EchoCave, 'id'>[], separator: string = ' |
   return caves.map((cave) => cave.id).join(separator);
 }
 
+type DrawCountField = 'drawCount' | 'picDrawCount';
+
 async function getCaveIdsByField(
   ctx: Context,
   session: Session,
@@ -48,7 +50,11 @@ async function getCaveIdsByField(
   return session.text('.msgListHeader') + '\n' + formatCaveIdList(caves);
 }
 
-async function incrementDrawCount(ctx: Context, caveMsg: EchoCave) {
+async function incrementDrawCount(
+  ctx: Context,
+  caveMsg: EchoCave,
+  field: DrawCountField = 'drawCount'
+) {
   await ctx.database.set(
     ACTIVE_CAVE_TABLE,
     {
@@ -56,7 +62,7 @@ async function incrementDrawCount(ctx: Context, caveMsg: EchoCave) {
       channelId: caveMsg.channelId,
     },
     {
-      drawCount: caveMsg.drawCount + 1,
+      [field]: (caveMsg[field] ?? 0) + 1,
     }
   );
 }
@@ -73,8 +79,12 @@ function selectRandomCave(caves: EchoCave[]) {
   return caves[Math.floor(Math.random() * caves.length)];
 }
 
-function selectWeightedRandomCave(caves: EchoCave[], alpha: number) {
-  const weights = caves.map((cave) => 1 / (1 + cave.drawCount * alpha));
+function selectWeightedRandomCave(
+  caves: EchoCave[],
+  alpha: number,
+  field: DrawCountField = 'drawCount'
+) {
+  const weights = caves.map((cave) => 1 / (1 + (cave[field] ?? 0) * alpha));
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
 
   let random = Math.random() * totalWeight;
@@ -85,6 +95,19 @@ function selectWeightedRandomCave(caves: EchoCave[], alpha: number) {
   }
 
   return caves[selectedIndex];
+}
+
+function isPictureMsgCave(cave: EchoCave) {
+  if (cave.type !== 'msg') {
+    return false;
+  }
+
+  try {
+    const content = JSON.parse(cave.content) as Array<{ type?: string }>;
+    return Array.isArray(content) && content.some((element) => element?.type === 'image');
+  } catch {
+    return false;
+  }
 }
 
 async function getTargetedUserCave(
@@ -114,7 +137,13 @@ async function getTargetedUserCave(
   return selectRandomCave(matchingCaves);
 }
 
-export async function getCave(ctx: Context, session: Session, cfg: Config, target?: string) {
+export async function getCave(
+  ctx: Context,
+  session: Session,
+  cfg: Config,
+  target?: string,
+  pictureOnly: boolean = false
+) {
   const guildAccessError = ensureGuildSession(session);
   if (guildAccessError) {
     return session.text(guildAccessError);
@@ -127,20 +156,27 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, targe
 
   let caveMsg: EchoCave;
   let shouldIncrementDrawCount = true;
+  const drawCountField: DrawCountField = pictureOnly ? 'picDrawCount' : 'drawCount';
 
   const { channelId } = session;
+
+  if (pictureOnly && target) {
+    return session.text('echo-cave.general.noMsgWithId');
+  }
 
   if (!target) {
     const caves = await ctx.database.get(ACTIVE_CAVE_TABLE, {
       channelId,
     });
 
-    if (caves.length === 0) {
-      return session.text('.noMsgInCave');
+    const selectableCaves = pictureOnly ? caves.filter(isPictureMsgCave) : caves;
+
+    if (selectableCaves.length === 0) {
+      return session.text(pictureOnly ? '.noPicMsgInCave' : '.noMsgInCave');
     }
 
     const alpha = cfg.alpha ?? 0.2;
-    caveMsg = selectWeightedRandomCave(caves, alpha);
+    caveMsg = selectWeightedRandomCave(selectableCaves, alpha, drawCountField);
   } else {
     const trimmedTarget = target.trim();
     const parseResult = parseUserIds(trimmedTarget);
@@ -166,7 +202,7 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, targe
           return await handleCaveSendFailure(ctx, session, caveMsg, cfg, error);
         }
 
-        await incrementDrawCount(ctx, caveMsg);
+        await incrementDrawCount(ctx, caveMsg, drawCountField);
         return;
       }
     }
@@ -195,6 +231,6 @@ export async function getCave(ctx: Context, session: Session, cfg: Config, targe
   }
 
   if (shouldIncrementDrawCount) {
-    await incrementDrawCount(ctx, caveMsg);
+    await incrementDrawCount(ctx, caveMsg, drawCountField);
   }
 }
