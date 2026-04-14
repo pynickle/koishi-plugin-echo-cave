@@ -85,6 +85,7 @@ npm install koishi-plugin-echo-cave
 | `autoBindSingleForwardUser`  | boolean | `false` | 转发消息仅识别到一个用户时，是否默认自动绑定该用户 |
 | `forwardSpecialUserHandlingMode` | `'ignore' \| 'reject' \| 'confirm'` | `'ignore'` | 检测到转发消息中包含用户 `1094950020` 时的处理方式：忽略、提醒后拒绝存储、或提醒并要求确认后再存储 |
 | `alpha`                      | number  | `0.2`   | 加权随机抽取的调整因子，控制抽取次数对概率的影响程度，值越大影响越明显 |
+| `s3UploadFailureFallbackMode` | `'local' \| 'original-link'` | `'local'` | 仅在 `mediaStorage='s3'` 时生效：S3 上传失败后回退到本地存储，或保留原始链接 |
 | `enableAutoReindex`          | boolean | `false` | 是否启用每日自动重整回声洞 public ID |
 | `autoReindexTime`            | string  | `00:00` | 自动重整的每日执行时间，格式为 `HH:mm` |
 
@@ -108,6 +109,7 @@ npm install koishi-plugin-echo-cave
 - 如果重排前备份写入失败，命令会直接终止，不会开始改写数据库
 - 若开启 `enableAutoReindex`，插件会在 `autoReindexTime` 指定的每日时间自动执行同样的 public ID 重排，并输出日志
 - 如果需要恢复，可执行 `cave.admin.restore-reindex <备份路径>` 读取对应的 JSON 备份并回写数据库
+- 若 `mediaStorage='s3'` 且上传失败，可通过 `s3UploadFailureFallbackMode` 指定回退到本地存储，或直接保留原始媒体链接
 
 ## 🤝 贡献指南
 

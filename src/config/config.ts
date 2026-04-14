@@ -4,6 +4,7 @@ import { Schema } from 'koishi';
 export type SendFailureHandlingMode = 'auto-delete' | 'daily-report' | 'ignore';
 export type OversizedMediaCleanupMode = 'delete-cave' | 'keep-cave';
 export type ForwardSpecialUserHandlingMode = 'ignore' | 'reject' | 'confirm';
+export type S3UploadFailureFallbackMode = 'local' | 'original-link';
 
 export interface Config {
   adminMessageProtection?: boolean;
@@ -25,6 +26,7 @@ export interface Config {
   forwardSpecialUserHandlingMode?: ForwardSpecialUserHandlingMode;
   alpha?: number;
   mediaStorage?: 'local' | 's3';
+  s3UploadFailureFallbackMode?: S3UploadFailureFallbackMode;
   s3Bucket?: string;
   s3Region?: string;
   s3Endpoint?: string;
@@ -69,6 +71,7 @@ export const Config: Schema<Config> = Schema.intersect([
   }).description('媒体处理'),
   Schema.object({
     mediaStorage: Schema.union(['local', 's3']).default('local'),
+    s3UploadFailureFallbackMode: Schema.union(['local', 'original-link']).default('local'),
     s3Bucket: Schema.string().default(''),
     s3Region: Schema.string().default(''),
     s3Endpoint: Schema.string().default(''),

@@ -1,4 +1,4 @@
-import { Config } from '../../config/config';
+import { Config, S3UploadFailureFallbackMode } from '../../config/config';
 import {
   CaveMediaUrlFields,
   createCaveRecord,
@@ -238,9 +238,13 @@ function getFileNameFromRef(fileRef: string, type: MediaType): string {
 function buildStableTransferFileName(fileRef: string, type: MediaType): string {
   const sourceName = getFileNameFromRef(fileRef, type);
   const parsedName = path.parse(sourceName);
-  const baseName = parsedName.name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'media';
+  const baseName =
+    parsedName.name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'media';
   const extension = parsedName.ext.replace(/^\./, '') || getDefaultExtension(type);
-  const hash = createHash('sha1').update(normalizeSourceIdentity(fileRef)).digest('hex').slice(0, 12);
+  const hash = createHash('sha1')
+    .update(normalizeSourceIdentity(fileRef))
+    .digest('hex')
+    .slice(0, 12);
 
   return `${baseName}-${hash}.${extension}`;
 }
@@ -311,6 +315,10 @@ function mergeStats(target: MediaMutationStats, source: MediaMutationStats) {
 
 function getStorageMode(cfg: Config): MediaStorageMode {
   return cfg.mediaStorage === 's3' ? 's3' : 'local';
+}
+
+function getS3UploadFailureFallbackMode(cfg: Config): S3UploadFailureFallbackMode {
+  return cfg.s3UploadFailureFallbackMode === 'original-link' ? 'original-link' : 'local';
 }
 
 function hasS3Config(cfg: Config): boolean {
@@ -1000,19 +1008,63 @@ async function transferMediaRefToChannel(
     return plan;
   }
 
-  if (isS3Uri(fileRef)) {
-    const source = parseS3Uri(fileRef);
-    if (!source) {
-      throw new Error(`Invalid S3 uri: ${fileRef}`);
+  try {
+    if (isS3Uri(fileRef)) {
+      const source = parseS3Uri(fileRef);
+      if (!source) {
+        throw new Error(`Invalid S3 uri: ${fileRef}`);
+      }
+
+      const nextRef = await transferS3ObjectToChannel(
+        cfg,
+        source,
+        type,
+        targetChannelId,
+        transferMode
+      );
+      const targetLocation = parseS3Uri(nextRef);
+      const plan: MediaTransferPlan = {
+        nextRef,
+        rollback: targetLocation
+          ? async () => {
+              try {
+                await deleteS3Object(cfg, targetLocation);
+              } catch (error) {
+                return;
+              }
+            }
+          : undefined,
+      };
+
+      if (transferMode === 'move') {
+        plan.commit = async () => {
+          try {
+            await deleteS3Object(cfg, source);
+          } catch (error) {
+            return;
+          }
+        };
+        stats.mediaMoved += 1;
+        stats.mediaDeleted += 1;
+      } else {
+        stats.mediaCopied += 1;
+      }
+
+      state.transferPlans.set(cacheKey, plan);
+      return plan;
     }
 
-    const nextRef = await transferS3ObjectToChannel(
+    const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
+    const location = await uploadTransferredMediaToS3(
       cfg,
-      source,
-      type,
+      fileRef,
       targetChannelId,
-      transferMode
+      type,
+      loaded.buffer,
+      loaded.contentType
     );
+
+    const nextRef = toS3Uri(location);
     const targetLocation = parseS3Uri(nextRef);
     const plan: MediaTransferPlan = {
       nextRef,
@@ -1027,68 +1079,52 @@ async function transferMediaRefToChannel(
         : undefined,
     };
 
-    if (transferMode === 'move') {
+    if (transferMode === 'move' && isFileUri(fileRef)) {
+      const currentPath = fromFileUri(fileRef);
       plan.commit = async () => {
         try {
-          await deleteS3Object(cfg, source);
+          await fs.unlink(currentPath);
+          base64Cache.delete(currentPath);
+          base64Cache.delete(fileRef);
         } catch (error) {
           return;
         }
       };
-      stats.mediaMoved += 1;
       stats.mediaDeleted += 1;
-    } else {
-      stats.mediaCopied += 1;
+      stats.mediaMoved += 1;
     }
 
     state.transferPlans.set(cacheKey, plan);
+    stats.mediaUploaded += 1;
+    await hooks?.onS3Upload?.(type, nextRef);
     return plan;
+  } catch (error) {
+    const fallbackMode = getS3UploadFailureFallbackMode(cfg);
+    ctx.logger.warn(
+      `Failed to store media in S3 for ${fileRef}, fallback mode=${fallbackMode}: ${error}`
+    );
+
+    if (fallbackMode === 'original-link') {
+      const plan: MediaTransferPlan = { nextRef: fileRef };
+      state.transferPlans.set(cacheKey, plan);
+      return plan;
+    }
+
+    const fallbackPlan = await transferMediaRefToChannel(
+      ctx,
+      fileRef,
+      type,
+      targetChannelId,
+      'local',
+      transferMode,
+      cfg,
+      state,
+      stats,
+      hooks
+    );
+    state.transferPlans.set(cacheKey, fallbackPlan);
+    return fallbackPlan;
   }
-
-  const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
-  const location = await uploadTransferredMediaToS3(
-    cfg,
-    fileRef,
-    targetChannelId,
-    type,
-    loaded.buffer,
-    loaded.contentType
-  );
-
-  const nextRef = toS3Uri(location);
-  const targetLocation = parseS3Uri(nextRef);
-  const plan: MediaTransferPlan = {
-    nextRef,
-    rollback: targetLocation
-      ? async () => {
-          try {
-            await deleteS3Object(cfg, targetLocation);
-          } catch (error) {
-            return;
-          }
-        }
-      : undefined,
-  };
-
-  if (transferMode === 'move' && isFileUri(fileRef)) {
-    const currentPath = fromFileUri(fileRef);
-    plan.commit = async () => {
-      try {
-        await fs.unlink(currentPath);
-        base64Cache.delete(currentPath);
-        base64Cache.delete(fileRef);
-      } catch (error) {
-        return;
-      }
-    };
-    stats.mediaDeleted += 1;
-    stats.mediaMoved += 1;
-  }
-
-  state.transferPlans.set(cacheKey, plan);
-  stats.mediaUploaded += 1;
-  await hooks?.onS3Upload?.(type, nextRef);
-  return plan;
 }
 
 async function mutateMessageContent(
@@ -1461,15 +1497,30 @@ export async function saveMedia(
     }
 
     if (getStorageMode(cfg) === 's3') {
-      const location = await uploadBufferToS3(
-        cfg,
-        channelId,
-        type,
-        buffer,
-        extension,
-        contentType || getMimeTypeByExtension(`.${extension}`, type)
-      );
-      return toS3Uri(location);
+      try {
+        const location = await uploadBufferToS3(
+          cfg,
+          channelId,
+          type,
+          buffer,
+          extension,
+          contentType || getMimeTypeByExtension(`.${extension}`, type)
+        );
+        return toS3Uri(location);
+      } catch (error) {
+        const fallbackMode = getS3UploadFailureFallbackMode(cfg);
+        ctx.logger.warn(
+          `Failed to upload ${type} to S3 for ${mediaUrl}, fallback mode=${fallbackMode}: ${error}`
+        );
+
+        if (fallbackMode === 'original-link') {
+          return mediaUrl;
+        }
+
+        const savedPath = await writeLocalMedia(ctx, channelId, type, buffer, extension);
+        await debouncedCleanup(ctx, cfg, type, channelId);
+        return savedPath;
+      }
     }
 
     const savedPath = await writeLocalMedia(ctx, channelId, type, buffer, extension);

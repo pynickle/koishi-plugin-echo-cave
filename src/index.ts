@@ -261,7 +261,9 @@ export function apply(ctx: Context, cfg: Config) {
 
   ctx
     .command('cave.admin.backfill-media-urls [idRanges:text]')
-    .action(async ({ session }, idRanges) => await backfillCaveMediaUrls(ctx, session, cfg, idRanges));
+    .action(
+      async ({ session }, idRanges) => await backfillCaveMediaUrls(ctx, session, cfg, idRanges)
+    );
 
   ctx
     .command('cave.admin.reindex')
