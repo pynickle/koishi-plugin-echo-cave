@@ -21,7 +21,7 @@ importers:
         specifier: ^1.15.0
         version: 1.15.0
       koishi:
-        specifier: ^4.18.10
+        specifier: ^4.18.11
         version: 4.18.11(@cordisjs/plugin-http@0.6.3(cordis@3.18.1))(cordis@3.18.1)
       uuid:
         specifier: ^11.1.0
