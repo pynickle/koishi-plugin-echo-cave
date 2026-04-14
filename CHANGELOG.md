@@ -1,3 +1,9 @@
+## [1.31.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.31.0...v1.31.1) (2026-04-14)
+
+### 🚀 Improvements
+
+* add s3 fallback ([99af804](https://github.com/pynickle/koishi-plugin-echo-cave/commit/99af804569cfa15ed078358940b33b844c8bb1e5))
+
 ## [1.31.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.30.0...v1.31.0) (2026-04-14)
 
 ### ✨ Features
