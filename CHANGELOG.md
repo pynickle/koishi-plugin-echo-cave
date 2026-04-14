@@ -1,3 +1,9 @@
+## [1.31.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.30.0...v1.31.0) (2026-04-14)
+
+### ✨ Features
+
+* new media url in db ([30cb914](https://github.com/pynickle/koishi-plugin-echo-cave/commit/30cb9148a89face12bf2bc044c2d9f4a8160a85c))
+
 ## [1.30.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.15...v1.30.0) (2026-04-14)
 
 ### ✨ Features
