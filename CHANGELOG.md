@@ -1,3 +1,9 @@
+## [1.29.15](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.14...v1.29.15) (2026-04-14)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1030.0 ([72651d2](https://github.com/pynickle/koishi-plugin-echo-cave/commit/72651d20296b42b93b14c9b625fc0bf731b8a98f))
+
 ## [1.29.14](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.13...v1.29.14) (2026-04-14)
 
 ### 🐛 Bug Fixes
