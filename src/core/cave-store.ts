@@ -3,7 +3,42 @@ import { EchoCave } from '../index';
 
 export const ACTIVE_CAVE_TABLE = 'echo_cave_v3' as const;
 
-export interface CaveSnapshotRecord {
+export interface CaveMediaUrlFields {
+  fileUrls: string[];
+  imageUrls: string[];
+  recordUrls: string[];
+  videoUrls: string[];
+}
+
+export function createEmptyCaveMediaUrlFields(): CaveMediaUrlFields {
+  return {
+    fileUrls: [],
+    imageUrls: [],
+    recordUrls: [],
+    videoUrls: [],
+  };
+}
+
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+export function normalizeCaveMediaUrlFields(
+  cave?: Partial<CaveMediaUrlFields> | null
+): CaveMediaUrlFields {
+  return {
+    fileUrls: normalizeStringList(cave?.fileUrls),
+    imageUrls: normalizeStringList(cave?.imageUrls),
+    recordUrls: normalizeStringList(cave?.recordUrls),
+    videoUrls: normalizeStringList(cave?.videoUrls),
+  };
+}
+
+export interface CaveSnapshotRecord extends CaveMediaUrlFields {
   id: number;
   channelId: string;
   createTime: Date;
@@ -21,6 +56,8 @@ export interface CaveBackupRecord extends CaveSnapshotRecord {
 }
 
 export function toCaveSnapshotRecord<T extends CaveSnapshotRecord>(cave: T): CaveSnapshotRecord {
+  const mediaUrlFields = normalizeCaveMediaUrlFields(cave);
+
   return {
     id: cave.id,
     channelId: cave.channelId,
@@ -32,6 +69,7 @@ export function toCaveSnapshotRecord<T extends CaveSnapshotRecord>(cave: T): Cav
     relatedUsers: [...cave.relatedUsers],
     drawCount: cave.drawCount,
     picDrawCount: cave.picDrawCount ?? 0,
+    ...mediaUrlFields,
   };
 }
 
@@ -68,6 +106,8 @@ export async function removeCaveByEntryId(ctx: Context, entryId: number) {
 }
 
 export async function createCaveRecord(ctx: Context, cave: CaveSnapshotRecord) {
+  const mediaUrlFields = normalizeCaveMediaUrlFields(cave);
+
   return await ctx.database.create(ACTIVE_CAVE_TABLE, {
     id: cave.id,
     channelId: cave.channelId,
@@ -79,6 +119,7 @@ export async function createCaveRecord(ctx: Context, cave: CaveSnapshotRecord) {
     relatedUsers: [...cave.relatedUsers],
     drawCount: cave.drawCount,
     picDrawCount: cave.picDrawCount ?? 0,
+    ...mediaUrlFields,
   });
 }
 

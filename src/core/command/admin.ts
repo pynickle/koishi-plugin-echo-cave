@@ -2,9 +2,12 @@ import { Config } from '../../config/config';
 import {
   ACTIVE_CAVE_TABLE,
   CaveBackupRecord,
+  CaveMediaUrlFields,
   createCaveRecord,
+  createEmptyCaveMediaUrlFields,
   getAllCaves,
   getCavesByChannel,
+  normalizeCaveMediaUrlFields,
   removeCaveByEntryId,
   toCaveBackupRecord,
   toCaveSnapshotRecord,
@@ -12,6 +15,7 @@ import {
 } from '../cave-store';
 import { EchoCave } from '../../index';
 import {
+  collectStoredMessageMediaUrls,
   MediaType,
   inspectCaveMediaRefs,
   mergeChannelCaves,
@@ -48,12 +52,29 @@ interface DailyTime {
   minute: number;
 }
 
+function hasStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function areMediaUrlFieldsEmpty(fields: Partial<CaveMediaUrlFields>) {
+  const normalized = normalizeCaveMediaUrlFields(fields);
+  return (
+    normalized.fileUrls.length === 0 &&
+    normalized.imageUrls.length === 0 &&
+    normalized.recordUrls.length === 0 &&
+    normalized.videoUrls.length === 0
+  );
+}
+
 function cloneCaveRecord(cave: EchoCave, id: number): EchoCave {
+  const mediaUrlFields = normalizeCaveMediaUrlFields(cave);
+
   return {
     ...cave,
     createTime: new Date(cave.createTime),
     id,
     relatedUsers: [...cave.relatedUsers],
+    ...mediaUrlFields,
   };
 }
 
@@ -112,6 +133,8 @@ function buildSequentialCaveSnapshot(caves: EchoCave[]) {
 }
 
 function normalizeCaveRecord(cave: EchoCave) {
+  const mediaUrlFields = normalizeCaveMediaUrlFields(cave);
+
   return {
     channelId: cave.channelId,
     content: cave.content,
@@ -123,6 +146,7 @@ function normalizeCaveRecord(cave: EchoCave) {
     relatedUsers: [...cave.relatedUsers],
     type: cave.type,
     userId: cave.userId,
+    ...mediaUrlFields,
   };
 }
 
@@ -155,7 +179,11 @@ function isEchoCaveRecord(value: unknown): value is EchoCave {
     Array.isArray(value.relatedUsers) &&
     value.relatedUsers.every((user) => typeof user === 'string') &&
     typeof value.drawCount === 'number' &&
-    (typeof value.picDrawCount === 'number' || typeof value.picDrawCount === 'undefined')
+    (typeof value.picDrawCount === 'number' || typeof value.picDrawCount === 'undefined') &&
+    (typeof value.fileUrls === 'undefined' || hasStringArray(value.fileUrls)) &&
+    (typeof value.imageUrls === 'undefined' || hasStringArray(value.imageUrls)) &&
+    (typeof value.recordUrls === 'undefined' || hasStringArray(value.recordUrls)) &&
+    (typeof value.videoUrls === 'undefined' || hasStringArray(value.videoUrls))
   );
 }
 
@@ -617,6 +645,85 @@ export async function inspectMediaRefsForMigration(
       })
     );
   }
+}
+
+export async function backfillCaveMediaUrls(
+  ctx: Context,
+  session: Session,
+  cfg: Config,
+  idRangesOption?: string
+) {
+  const accessError = ensureAdminPrivateAccess(session, cfg);
+  if (accessError) {
+    return accessError;
+  }
+
+  const idRanges = parseIdRanges(idRangesOption);
+  if (idRanges === null) {
+    return session.text('commands.cave.admin.backfill-media-urls.messages.invalidRange');
+  }
+
+  const displayRanges = idRangesOption?.trim() || getAllRangesLabel(session);
+  const caves = await getAllCaves(ctx);
+  const candidates = caves.filter(
+    (cave) => isIdInRanges(cave.id, idRanges) && areMediaUrlFieldsEmpty(cave)
+  );
+
+  if (candidates.length === 0) {
+    return session.text('commands.cave.admin.backfill-media-urls.messages.noCandidates', {
+      idRanges: displayRanges,
+    });
+  }
+
+  const confirmed = await requestSecondConfirmation(
+    ctx,
+    session,
+    session.text('commands.cave.admin.backfill-media-urls.messages.confirmSummary', {
+      idRanges: displayRanges,
+      candidateCount: candidates.length,
+    }),
+    session.text('commands.cave.admin.backfill-media-urls.messages.confirmRetry'),
+    session.text('commands.cave.admin.backfill-media-urls.messages.confirmTimeout'),
+    session.text('commands.cave.admin.backfill-media-urls.messages.confirmCancelled')
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  let updatedCount = 0;
+  let skippedWithoutMedia = 0;
+  const failedRecordIds: number[] = [];
+
+  for (const cave of candidates) {
+    try {
+      if (typeof cave.entryId !== 'number') {
+        throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+      }
+
+      const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, cave.content);
+      if (areMediaUrlFieldsEmpty(mediaUrlFields)) {
+        skippedWithoutMedia += 1;
+        continue;
+      }
+
+      await updateCaveByEntryId(ctx, cave.entryId, mediaUrlFields);
+      updatedCount += 1;
+    } catch (error) {
+      failedRecordIds.push(cave.id);
+      ctx.logger.warn(`Failed to backfill media URLs for cave #${cave.id}: ${error}`);
+    }
+  }
+
+  return appendFailedRecordSummary(
+    session,
+    session.text('commands.cave.admin.backfill-media-urls.messages.backfillDone', {
+      scannedRecords: candidates.length,
+      updatedCount,
+      skippedWithoutMedia,
+    }),
+    failedRecordIds
+  );
 }
 
 function buildReindexPlan(caves: EchoCave[]): ReindexPlanItem[] {

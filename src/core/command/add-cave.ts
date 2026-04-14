@@ -1,7 +1,11 @@
 import { checkUsersInGroup, getUserName } from '../../adapters/onebot/user';
 import { Config } from '../../config/config';
 import { ACTIVE_CAVE_TABLE, getNextCavePublicId } from '../cave-store';
-import { messageContainsMedia, processStoredMessageMedia } from '../../utils/media/media-helper';
+import {
+  collectStoredMessageMediaUrls,
+  messageContainsMedia,
+  processStoredMessageMedia,
+} from '../../utils/media/media-helper';
 import { parseUserIds } from '../../utils/msg/element-helper';
 import {
   listenForUserMessage,
@@ -191,6 +195,7 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
     finalParsedUserIds,
     originName
   );
+  const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, content as string);
 
   try {
     const nextId = await getNextCavePublicId(ctx);
@@ -203,7 +208,9 @@ export async function addCave(ctx: Context, session: Session, cfg: Config, userI
       type,
       content,
       relatedUsers: finalParsedUserIds,
+      drawCount: 0,
       picDrawCount: 0,
+      ...mediaUrlFields,
     });
 
     return session.text('.msgSaved', { id: result.id, relatedUsers: relatedUsersFormatted });

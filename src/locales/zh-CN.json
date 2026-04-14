@@ -213,6 +213,18 @@
         "confirmTimeout": "⌛ 二次确认超时，检测未执行。"
       }
     },
+    "cave.admin.backfill-media-urls": {
+      "description": "为历史回声洞回填媒体 URL 列",
+      "messages": {
+        "invalidRange": "❌ 范围参数格式无效。请使用 0-100,105-240 或 12,18-20 这样的格式。",
+        "noCandidates": "🔍 在范围 {idRanges} 内未找到四列媒体 URL 都为空的记录。",
+        "confirmSummary": "⚠️ 即将为历史回声洞回填媒体 URL 列\n检测范围：{idRanges}\n候选记录数：{candidateCount}\n\n本次操作只会处理 fileUrls、imageUrls、recordUrls、videoUrls 四列都为空的记录，并从存储消息内容中提取媒体引用后写回数据库。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
+        "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
+        "confirmCancelled": "🛑 已取消本次媒体 URL 回填。",
+        "confirmTimeout": "⌛ 二次确认超时，媒体 URL 回填未执行。",
+        "backfillDone": "✅ 媒体 URL 回填完成：扫描 {scannedRecords} 条候选记录，成功更新 {updatedCount} 条，无媒体可回填 {skippedWithoutMedia} 条。"
+      }
+    },
     "cave.admin.reindex": {
       "description": "重排所有回声洞 public ID，使现有记录重新连续编号而不改动内部主键",
       "messages": {

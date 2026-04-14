@@ -1,9 +1,12 @@
 import { Config } from '../../config/config';
 import {
+  CaveMediaUrlFields,
   createCaveRecord,
+  createEmptyCaveMediaUrlFields,
   getAllCaves,
   getCavesByChannel,
   getNextCavePublicId,
+  normalizeCaveMediaUrlFields,
   removeCaveByEntryId,
   updateCaveByEntryId,
 } from '../../core/cave-store';
@@ -17,6 +20,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Context, Session } from 'koishi';
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -155,6 +159,144 @@ function createEmptyStats(): MediaMutationStats {
     mediaSkipped: 0,
     mediaFailed: 0,
   };
+}
+
+function getMediaUrlFieldName(type: MediaType): keyof CaveMediaUrlFields {
+  switch (type) {
+    case 'image':
+      return 'imageUrls';
+    case 'video':
+      return 'videoUrls';
+    case 'record':
+      return 'recordUrls';
+    default:
+      return 'fileUrls';
+  }
+}
+
+function hasMediaUrlFieldChanges(
+  current: Partial<CaveMediaUrlFields>,
+  next: CaveMediaUrlFields
+): boolean {
+  const normalizedCurrent = normalizeCaveMediaUrlFields(current);
+
+  return (
+    JSON.stringify(normalizedCurrent.fileUrls) !== JSON.stringify(next.fileUrls) ||
+    JSON.stringify(normalizedCurrent.imageUrls) !== JSON.stringify(next.imageUrls) ||
+    JSON.stringify(normalizedCurrent.recordUrls) !== JSON.stringify(next.recordUrls) ||
+    JSON.stringify(normalizedCurrent.videoUrls) !== JSON.stringify(next.videoUrls)
+  );
+}
+
+function createUniqueStringList(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function normalizeSourceIdentity(fileRef: string): string {
+  if (fileRef.startsWith('file:///')) {
+    return normalizePathForComparison(fromFileUri(fileRef));
+  }
+
+  if (path.isAbsolute(fileRef) || /^[A-Za-z]:[\\/]/.test(fileRef)) {
+    return normalizePathForComparison(fileRef);
+  }
+
+  if (fileRef.startsWith('s3://')) {
+    return fileRef.toLowerCase();
+  }
+
+  return fileRef;
+}
+
+function getFileNameFromRef(fileRef: string, type: MediaType): string {
+  if (fileRef.startsWith('file:///')) {
+    return path.basename(fromFileUri(fileRef));
+  }
+
+  if (path.isAbsolute(fileRef) || /^[A-Za-z]:[\\/]/.test(fileRef)) {
+    return path.basename(fileRef);
+  }
+
+  if (fileRef.startsWith('s3://')) {
+    const location = parseS3Uri(fileRef);
+    if (location) {
+      return path.basename(location.key);
+    }
+  }
+
+  if (/^https?:\/\//i.test(fileRef)) {
+    try {
+      return path.basename(new URL(fileRef).pathname) || `media.${getDefaultExtension(type)}`;
+    } catch (error) {
+      return `media.${getDefaultExtension(type)}`;
+    }
+  }
+
+  return `media.${getDefaultExtension(type)}`;
+}
+
+function buildStableTransferFileName(fileRef: string, type: MediaType): string {
+  const sourceName = getFileNameFromRef(fileRef, type);
+  const parsedName = path.parse(sourceName);
+  const baseName = parsedName.name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'media';
+  const extension = parsedName.ext.replace(/^\./, '') || getDefaultExtension(type);
+  const hash = createHash('sha1').update(normalizeSourceIdentity(fileRef)).digest('hex').slice(0, 12);
+
+  return `${baseName}-${hash}.${extension}`;
+}
+
+async function removeFileIfExists(filePath: string): Promise<void> {
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    const fileError = error as NodeJS.ErrnoException;
+    if (fileError.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
+
+async function writeTransferredLocalMedia(
+  ctx: Context,
+  fileRef: string,
+  channelId: string,
+  type: MediaType,
+  buffer: Buffer
+): Promise<string> {
+  const targetDir = getLocalMediaV2Dir(ctx, channelId, type);
+  await fs.mkdir(targetDir, { recursive: true });
+
+  const targetPath = path.join(targetDir, buildStableTransferFileName(fileRef, type));
+  await removeFileIfExists(targetPath);
+  await fs.writeFile(targetPath, buffer);
+  return targetPath;
+}
+
+async function uploadTransferredMediaToS3(
+  cfg: Config,
+  fileRef: string,
+  channelId: string,
+  type: MediaType,
+  buffer: Buffer,
+  contentType?: string
+): Promise<S3Location> {
+  const client = getS3Client(cfg);
+  const bucket = cfg.s3Bucket;
+  if (!bucket) {
+    throw new Error('S3 bucket is not configured.');
+  }
+
+  const key = buildS3Key(cfg, channelId, type, buildStableTransferFileName(fileRef, type));
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    })
+  );
+
+  return { bucket, key };
 }
 
 function mergeStats(target: MediaMutationStats, source: MediaMutationStats) {
@@ -677,15 +819,6 @@ async function createPresignedGetUrl(cfg: Config, location: S3Location): Promise
   );
 }
 
-async function moveLocalFile(sourcePath: string, targetPath: string): Promise<void> {
-  try {
-    await fs.rename(sourcePath, targetPath);
-  } catch (error) {
-    await fs.copyFile(sourcePath, targetPath);
-    await fs.unlink(sourcePath);
-  }
-}
-
 async function transferLocalFileToChannel(
   ctx: Context,
   sourcePath: string,
@@ -694,15 +827,15 @@ async function transferLocalFileToChannel(
   mode: MediaTransferMode
 ): Promise<string> {
   const targetDir = getLocalMediaV2Dir(ctx, targetChannelId, type);
-  if (isPathInsideDir(sourcePath, targetDir)) {
+  await fs.mkdir(targetDir, { recursive: true });
+
+  const sourceRef = toFileUri(sourcePath);
+  const targetPath = path.join(targetDir, buildStableTransferFileName(sourceRef, type));
+  if (normalizePathForComparison(sourcePath) === normalizePathForComparison(targetPath)) {
     return toFileUri(sourcePath);
   }
 
-  await fs.mkdir(targetDir, { recursive: true });
-
-  const extension = path.extname(sourcePath).slice(1) || getDefaultExtension(type);
-  const targetPath = path.join(targetDir, `${uuidv4().replace(/-/g, '')}.${extension}`);
-
+  await removeFileIfExists(targetPath);
   await fs.copyFile(sourcePath, targetPath);
 
   return toFileUri(targetPath);
@@ -720,8 +853,12 @@ async function transferS3ObjectToChannel(
     throw new Error('S3 bucket is not configured.');
   }
 
-  const extension = path.extname(source.key).slice(1) || getDefaultExtension(type);
-  const key = buildS3Key(cfg, targetChannelId, type, `${uuidv4().replace(/-/g, '')}.${extension}`);
+  const key = buildS3Key(
+    cfg,
+    targetChannelId,
+    type,
+    buildStableTransferFileName(toS3Uri(source), type)
+  );
   const target = { bucket, key };
 
   if (source.bucket === target.bucket && source.key === target.key) {
@@ -829,8 +966,13 @@ async function transferMediaRefToChannel(
     }
 
     const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
-    const extension = path.extname(loaded.sourceKey).slice(1) || getDefaultExtension(type);
-    const targetPath = await writeLocalMedia(ctx, targetChannelId, type, loaded.buffer, extension);
+    const targetPath = await writeTransferredLocalMedia(
+      ctx,
+      fileRef,
+      targetChannelId,
+      type,
+      loaded.buffer
+    );
 
     const plan: MediaTransferPlan = {
       nextRef: toFileUri(targetPath),
@@ -904,13 +1046,12 @@ async function transferMediaRefToChannel(
   }
 
   const loaded = await loadMediaBuffer(ctx, fileRef, cfg);
-  const extension = path.extname(loaded.sourceKey).slice(1) || getDefaultExtension(type);
-  const location = await uploadBufferToS3(
+  const location = await uploadTransferredMediaToS3(
     cfg,
+    fileRef,
     targetChannelId,
     type,
     loaded.buffer,
-    extension,
     loaded.contentType
   );
 
@@ -1018,16 +1159,19 @@ export async function processStoredMessageMedia(
   return rewritten.content;
 }
 
-async function collectMessageMediaRefs(ctx: Context, content: string): Promise<string[]> {
+export async function collectStoredMessageMediaUrls(
+  ctx: Context,
+  content: string
+): Promise<CaveMediaUrlFields> {
   const parsed = JSON.parse(content);
   const elements = Array.isArray(parsed) ? parsed : [parsed];
-  const refs: string[] = [];
+  const refs = createEmptyCaveMediaUrlFields();
 
   const visitElement = async (element: MaybeMediaElement): Promise<void> => {
     if (isMediaType(element.type)) {
       const fileRef = getElementFileRef(ctx, element, element.type);
       if (fileRef) {
-        refs.push(fileRef);
+        refs[getMediaUrlFieldName(element.type)].push(fileRef);
       }
     }
 
@@ -1043,7 +1187,17 @@ async function collectMessageMediaRefs(ctx: Context, content: string): Promise<s
     await visitElement(element as MaybeMediaElement);
   }
 
-  return refs;
+  return {
+    fileUrls: createUniqueStringList(refs.fileUrls),
+    imageUrls: createUniqueStringList(refs.imageUrls),
+    recordUrls: createUniqueStringList(refs.recordUrls),
+    videoUrls: createUniqueStringList(refs.videoUrls),
+  };
+}
+
+async function collectMessageMediaRefs(ctx: Context, content: string): Promise<string[]> {
+  const refs = await collectStoredMessageMediaUrls(ctx, content);
+  return [...refs.fileUrls, ...refs.imageUrls, ...refs.recordUrls, ...refs.videoUrls];
 }
 
 async function collectCavesReferencingFiles(
@@ -1625,12 +1779,18 @@ export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
         (fileRef, type) => isLegacyLocalMediaRef(ctx, fileRef, type)
       );
 
-      if (rewritten.content !== cave.content) {
+      const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, rewritten.content);
+      const shouldUpdateMediaFields = hasMediaUrlFieldChanges(cave, mediaUrlFields);
+
+      if (rewritten.content !== cave.content || shouldUpdateMediaFields) {
         if (typeof cave.entryId !== 'number') {
           throw new Error(`missing_entry_id_for_cave_${cave.id}`);
         }
 
-        await updateCaveByEntryId(ctx, cave.entryId, { content: rewritten.content });
+        await updateCaveByEntryId(ctx, cave.entryId, {
+          content: rewritten.content,
+          ...mediaUrlFields,
+        });
         await runTransferPlans(rewritten.plans, 'commit');
       }
     } catch (error) {
@@ -1679,12 +1839,18 @@ export async function migrateLocalMediaToS3(
         hooks
       );
 
-      if (rewritten.content !== cave.content) {
+      const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, rewritten.content);
+      const shouldUpdateMediaFields = hasMediaUrlFieldChanges(cave, mediaUrlFields);
+
+      if (rewritten.content !== cave.content || shouldUpdateMediaFields) {
         if (typeof cave.entryId !== 'number') {
           throw new Error(`missing_entry_id_for_cave_${cave.id}`);
         }
 
-        await updateCaveByEntryId(ctx, cave.entryId, { content: rewritten.content });
+        await updateCaveByEntryId(ctx, cave.entryId, {
+          content: rewritten.content,
+          ...mediaUrlFields,
+        });
         await runTransferPlans(rewritten.plans, 'commit');
         await hooks?.onMigrationCommitted?.();
       }
@@ -1737,6 +1903,7 @@ export async function mergeChannelCaves(
 
       if (keepSource) {
         const nextId = await getNextCavePublicId(ctx);
+        const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, rewritten.content);
 
         await createCaveRecord(ctx, {
           id: nextId,
@@ -1749,15 +1916,19 @@ export async function mergeChannelCaves(
           relatedUsers: cave.relatedUsers,
           drawCount: cave.drawCount,
           picDrawCount: cave.picDrawCount ?? 0,
+          ...mediaUrlFields,
         });
       } else {
         if (typeof cave.entryId !== 'number') {
           throw new Error(`missing_entry_id_for_cave_${cave.id}`);
         }
 
+        const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, rewritten.content);
+
         await updateCaveByEntryId(ctx, cave.entryId, {
           channelId: targetChannelId,
           content: rewritten.content,
+          ...mediaUrlFields,
         });
       }
 

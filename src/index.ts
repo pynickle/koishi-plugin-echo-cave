@@ -1,7 +1,12 @@
 import { Config } from './config/config';
-import { ACTIVE_CAVE_TABLE, CaveSnapshotRecord } from './core/cave-store';
+import {
+  ACTIVE_CAVE_TABLE,
+  CaveSnapshotRecord,
+  createEmptyCaveMediaUrlFields,
+} from './core/cave-store';
 import { addCave } from './core/command/add-cave';
 import {
+  backfillCaveMediaUrls,
   inspectMediaRefsForMigration,
   mergeCavesBetweenChannels,
   migrateLegacyLocalMedia,
@@ -37,6 +42,10 @@ export interface EchoCave {
   relatedUsers: string[];
   drawCount: number;
   picDrawCount: number;
+  fileUrls: string[];
+  imageUrls: string[];
+  recordUrls: string[];
+  videoUrls: string[];
 }
 
 export interface EchoCaveSendFailure {
@@ -66,6 +75,8 @@ declare module 'koishi' {
 }
 
 function toV3Record(record: CaveSnapshotRecord) {
+  const mediaUrlFields = createEmptyCaveMediaUrlFields();
+
   return {
     id: record.id,
     channelId: record.channelId,
@@ -77,31 +88,12 @@ function toV3Record(record: CaveSnapshotRecord) {
     relatedUsers: [...record.relatedUsers],
     drawCount: record.drawCount,
     picDrawCount: record.picDrawCount ?? 0,
+    ...mediaUrlFields,
   };
 }
 
 export function apply(ctx: Context, cfg: Config) {
   ctx.i18n.define('zh-CN', zhCN);
-
-  ctx.model.extend(
-    'echo_cave',
-    {
-      id: 'unsigned',
-      channelId: 'string',
-      createTime: 'timestamp',
-      userId: 'string',
-      originUserId: 'string',
-      type: 'string',
-      content: 'text',
-      relatedUsers: 'list',
-      drawCount: { type: 'unsigned', initial: 0 },
-      picDrawCount: { type: 'unsigned', initial: 0 },
-    },
-    {
-      primary: 'id',
-      autoInc: true,
-    }
-  );
 
   ctx.model.extend(
     ACTIVE_CAVE_TABLE,
@@ -117,6 +109,10 @@ export function apply(ctx: Context, cfg: Config) {
       relatedUsers: 'list',
       drawCount: { type: 'unsigned', initial: 0 },
       picDrawCount: { type: 'unsigned', initial: 0 },
+      fileUrls: { type: 'list', initial: [] },
+      imageUrls: { type: 'list', initial: [] },
+      recordUrls: { type: 'list', initial: [] },
+      videoUrls: { type: 'list', initial: [] },
     },
     {
       primary: 'entryId',
@@ -171,17 +167,6 @@ export function apply(ctx: Context, cfg: Config) {
     },
     {
       primary: 'userId',
-    }
-  );
-
-  ctx.model.migrate(
-    'echo_cave',
-    {
-      id: 'unsigned',
-    },
-    async (database) => {
-      const data = await database.get('echo_cave', {});
-      await database.upsert('echo_cave_v2', data);
     }
   );
 
@@ -273,6 +258,10 @@ export function apply(ctx: Context, cfg: Config) {
       async ({ session }, idRanges) =>
         await inspectMediaRefsForMigration(ctx, session, cfg, idRanges)
     );
+
+  ctx
+    .command('cave.admin.backfill-media-urls [idRanges:text]')
+    .action(async ({ session }, idRanges) => await backfillCaveMediaUrls(ctx, session, cfg, idRanges));
 
   ctx
     .command('cave.admin.reindex')
