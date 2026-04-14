@@ -1,3 +1,13 @@
+## [1.29.14](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.13...v1.29.14) (2026-04-14)
+
+### 🐛 Bug Fixes
+
+* fix forward msg not send correctly ([6b6f2b4](https://github.com/pynickle/koishi-plugin-echo-cave/commit/6b6f2b411dd0451e8ff5621862cc69ba56c71c60))
+
+### 🔧 Miscellaneous Changes
+
+* xxx [skip ci] ([664eaab](https://github.com/pynickle/koishi-plugin-echo-cave/commit/664eaab7066c2e895b7883fd8f979706ea7c1e2d))
+
 ## [1.29.13](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.12...v1.29.13) (2026-04-13)
 
 ### 🐛 Bug Fixes
