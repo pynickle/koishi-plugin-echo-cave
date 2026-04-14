@@ -65,8 +65,8 @@
         "selectInstructionDetailed": "输入示例：1 2 或 all 或 skip",
         "selectInstructionBrief": "回复序号 / all / skip",
         "invalidSelection": "❌ 无效的选择，请重新输入！",
-        "specialForwardUserBlocked": "⚠️ 检测到该合并转发中包含特殊用户 1094950020，当前配置不允许存储这条回声洞。该提示会在 1 分钟后自动撤回。",
-        "specialForwardUserConfirmNotice": "⚠️ 检测到该合并转发中包含特殊用户 1094950020。下面会重新发出读取到的转发内容，请确认是否仍要存储。",
+        "specialForwardUserBlocked": "⚠️ 检测到该合并转发中的用户信息无法读取，当前配置不允许存储这条回声洞。该提示会在 1 分钟后自动撤回。",
+        "specialForwardUserConfirmNotice": "⚠️ 检测到该合并转发中的用户信息无法读取。下面会重新发出读取到的转发内容，请确认是否仍要存储。",
         "specialForwardUserConfirmPrompt": "请在 60 秒内回复“存储”继续，回复“取消”或“不存”放弃。",
         "specialForwardUserConfirmRetry": "⚠️ 无法识别输入，请回复“存储”或“取消”。"
       }
