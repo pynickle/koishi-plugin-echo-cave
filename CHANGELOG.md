@@ -1,3 +1,9 @@
+## [1.30.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.15...v1.30.0) (2026-04-14)
+
+### ✨ Features
+
+* add cave pic ([aeb769e](https://github.com/pynickle/koishi-plugin-echo-cave/commit/aeb769e1329cd69d09ad4aa187c1cc208c365dea))
+
 ## [1.29.15](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.29.14...v1.29.15) (2026-04-14)
 
 ### 🔧 Miscellaneous Changes
