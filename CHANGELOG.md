@@ -1,3 +1,9 @@
+## [1.31.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.31.1...v1.31.2) (2026-04-16)
+
+### 🚀 Improvements
+
+* improve admin command notification ([f6649b0](https://github.com/pynickle/koishi-plugin-echo-cave/commit/f6649b0b7904789822b659e7dad8152dae538931))
+
 ## [1.31.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.31.0...v1.31.1) (2026-04-14)
 
 ### 🚀 Improvements
