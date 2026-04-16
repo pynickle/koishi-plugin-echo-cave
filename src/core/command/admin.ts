@@ -16,7 +16,6 @@ import {
 import { EchoCave } from '../../index';
 import {
   collectStoredMessageMediaUrls,
-  MediaType,
   inspectCaveMediaRefs,
   mergeChannelCaves,
   migrateLocalMediaToS3,
@@ -28,6 +27,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 const REINDEX_SPECIAL_OFFSET = 1000000;
+const ADMIN_BATCH_PROGRESS_INTERVAL = 50;
 let caveMaintenanceLock = false;
 
 interface IdRange {
@@ -332,19 +332,6 @@ function getBooleanLabel(session: Session, value: boolean): string {
   );
 }
 
-function getMediaTypeLabel(session: Session, type: MediaType): string {
-  switch (type) {
-    case 'image':
-      return session.text('commands.cave.admin.common.mediaType.image');
-    case 'video':
-      return session.text('commands.cave.admin.common.mediaType.video');
-    case 'record':
-      return session.text('commands.cave.admin.common.mediaType.record');
-    default:
-      return session.text('commands.cave.admin.common.mediaType.file');
-  }
-}
-
 function getMediaStorageLabel(session: Session, storage: string): string {
   return session.text(
     storage === 's3'
@@ -370,6 +357,41 @@ function appendFailedRecordSummary(
     message,
     failedRecordIds: failedRecordIds.join(', '),
   });
+}
+
+async function sendBatchProgressIfNeeded(
+  session: Session,
+  processedCount: number,
+  totalCount: number,
+  messageKey: string
+) {
+  if (processedCount === 0 || processedCount % ADMIN_BATCH_PROGRESS_INTERVAL !== 0) {
+    return;
+  }
+
+  await session.send(
+    session.text(messageKey, {
+      processedCount,
+      totalCount,
+    })
+  );
+}
+
+async function sendBatchedInspectResults(session: Session, batch: Array<{ id: number; refs: string[] }>) {
+  if (batch.length === 0) {
+    return;
+  }
+
+  await session.send(
+    batch
+      .map(({ id, refs }) =>
+        session.text('commands.cave.admin.inspect-media.messages.resultItem', {
+          id,
+          refs: refs.join('\n'),
+        })
+      )
+      .join('\n\n')
+  );
 }
 
 function getAllRangesLabel(session: Session): string {
@@ -512,7 +534,26 @@ export async function mergeCavesBetweenChannels(
     return;
   }
 
-  const result = await mergeChannelCaves(ctx, cfg, sourceChannelId, targetChannelId, keepSource);
+  let processedCount = 0;
+  const totalCount = sourceCaves.length;
+  const result = await mergeChannelCaves(
+    ctx,
+    cfg,
+    sourceChannelId,
+    targetChannelId,
+    keepSource,
+    () => ({
+      onRecordProcessed: async () => {
+        processedCount += 1;
+        await sendBatchProgressIfNeeded(
+          session,
+          processedCount,
+          totalCount,
+          'commands.cave.admin.merge.messages.progress'
+        );
+      },
+    })
+  );
   return appendFailedRecordSummary(
     session,
     session.text('commands.cave.admin.merge.messages.mergeDone', result),
@@ -526,7 +567,19 @@ export async function migrateLegacyLocalMedia(ctx: Context, session: Session, cf
     return accessError;
   }
 
-  const result = await migrateLocalMediaToV2(ctx, cfg);
+  const caves = await getAllCaves(ctx);
+  let processedCount = 0;
+  const result = await migrateLocalMediaToV2(ctx, cfg, () => ({
+    onRecordProcessed: async () => {
+      processedCount += 1;
+      await sendBatchProgressIfNeeded(
+        session,
+        processedCount,
+        caves.length,
+        'commands.cave.admin.migrate-local-v2.messages.progress'
+      );
+    },
+  }));
   return appendFailedRecordSummary(
     session,
     session.text('commands.cave.admin.migrate-local-v2.messages.migrateDone', result),
@@ -572,21 +625,18 @@ export async function migrateMediaToS3(
     return;
   }
 
-  const result = await migrateLocalMediaToS3(ctx, cfg, keepLocal, (caveId) => {
-    const uploadedMediaTypes: MediaType[] = [];
+  const caves = await getAllCaves(ctx);
+  let processedCount = 0;
+  const result = await migrateLocalMediaToS3(ctx, cfg, keepLocal, () => {
     return {
-      onS3Upload: async (type) => {
-        uploadedMediaTypes.push(type);
-      },
-      onMigrationCommitted: async () => {
-        for (const mediaType of uploadedMediaTypes) {
-          await session.send(
-            session.text('commands.cave.admin.migrate-s3.messages.itemUploaded', {
-              caveId,
-              mediaType: getMediaTypeLabel(session, mediaType),
-            })
-          );
-        }
+      onRecordProcessed: async () => {
+        processedCount += 1;
+        await sendBatchProgressIfNeeded(
+          session,
+          processedCount,
+          caves.length,
+          'commands.cave.admin.migrate-s3.messages.progress'
+        );
       },
     };
   });
@@ -614,8 +664,8 @@ export async function inspectMediaRefsForMigration(
   }
 
   const displayRanges = idRangesOption?.trim() || getAllRangesLabel(session);
-  const results = await inspectCaveMediaRefs(ctx, (id) => isIdInRanges(id, idRanges));
-  if (results.length === 0) {
+  const inspection = await inspectCaveMediaRefs(ctx, (id) => isIdInRanges(id, idRanges));
+  if (inspection.results.length === 0 && inspection.failedRecordIds.length === 0) {
     return session.text('commands.cave.admin.inspect-media.messages.noMediaFound', {
       idRanges: displayRanges,
     });
@@ -626,7 +676,7 @@ export async function inspectMediaRefsForMigration(
     session,
     session.text('commands.cave.admin.inspect-media.messages.confirmSummary', {
       idRanges: displayRanges,
-      matchedCount: results.length,
+      matchedCount: inspection.results.length,
     }),
     session.text('commands.cave.admin.inspect-media.messages.confirmRetry'),
     session.text('commands.cave.admin.inspect-media.messages.confirmTimeout'),
@@ -637,14 +687,34 @@ export async function inspectMediaRefsForMigration(
     return;
   }
 
-  for (const { id, refs } of results) {
-    await session.send(
-      session.text('commands.cave.admin.inspect-media.messages.resultItem', {
-        id,
-        refs: refs.join('\n'),
-      })
-    );
+  let processedCount = 0;
+  const batchedResults: Array<{ id: number; refs: string[] }> = [];
+
+  for (const result of inspection.results) {
+    batchedResults.push(result);
+    processedCount += 1;
+
+    if (batchedResults.length === ADMIN_BATCH_PROGRESS_INTERVAL) {
+      await sendBatchedInspectResults(session, batchedResults);
+      batchedResults.length = 0;
+      await session.send(
+        session.text('commands.cave.admin.inspect-media.messages.progress', {
+          processedCount,
+          totalCount: inspection.results.length,
+        })
+      );
+    }
   }
+
+  await sendBatchedInspectResults(session, batchedResults);
+  return appendFailedRecordSummary(
+    session,
+    session.text('commands.cave.admin.inspect-media.messages.inspectDone', {
+      scannedRecords: inspection.scannedRecords,
+      matchedCount: inspection.results.length,
+    }),
+    inspection.failedRecordIds
+  );
 }
 
 export async function backfillCaveMediaUrls(
@@ -691,6 +761,7 @@ export async function backfillCaveMediaUrls(
     return;
   }
 
+  let processedCount = 0;
   let updatedCount = 0;
   let skippedWithoutMedia = 0;
   const failedRecordIds: number[] = [];
@@ -704,14 +775,21 @@ export async function backfillCaveMediaUrls(
       const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, cave.content);
       if (areMediaUrlFieldsEmpty(mediaUrlFields)) {
         skippedWithoutMedia += 1;
-        continue;
+      } else {
+        await updateCaveByEntryId(ctx, cave.entryId, mediaUrlFields);
+        updatedCount += 1;
       }
-
-      await updateCaveByEntryId(ctx, cave.entryId, mediaUrlFields);
-      updatedCount += 1;
     } catch (error) {
       failedRecordIds.push(cave.id);
       ctx.logger.warn(`Failed to backfill media URLs for cave #${cave.id}: ${error}`);
+    } finally {
+      processedCount += 1;
+      await sendBatchProgressIfNeeded(
+        session,
+        processedCount,
+        candidates.length,
+        'commands.cave.admin.backfill-media-urls.messages.progress'
+      );
     }
   }
 
@@ -758,11 +836,6 @@ async function writeReindexBackup(
 
   await fs.writeFile(backupPath, JSON.stringify(payload, null, 2), 'utf8');
   return backupPath;
-}
-
-async function applyReindexPlan(ctx: Context, originalCaves: EchoCave[]) {
-  const reindexedCaves = buildSequentialCaveSnapshot(originalCaves);
-  await replaceCaveSnapshot(ctx, originalCaves, reindexedCaves);
 }
 
 async function verifyCaveSnapshot(ctx: Context, expectedCaves: EchoCave[]) {
@@ -862,12 +935,33 @@ export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config
   setCaveMaintenanceLock(true);
   try {
     const reindexedCaves = buildSequentialCaveSnapshot(caves);
+    let processedCount = 0;
+    const failedRecordIds: number[] = [];
     for (const cave of reindexedCaves) {
-      if (typeof cave.entryId !== 'number') {
-        throw new Error(`missing_entry_id_for_cave_${cave.id}`);
-      }
+      try {
+        if (typeof cave.entryId !== 'number') {
+          throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+        }
 
-      await updateCaveByEntryId(ctx, cave.entryId, { id: cave.id });
+        await updateCaveByEntryId(ctx, cave.entryId, { id: cave.id });
+        processedCount += 1;
+        await sendBatchProgressIfNeeded(
+          session,
+          processedCount,
+          reindexedCaves.length,
+          'commands.cave.admin.reindex.messages.progress'
+        );
+      } catch (error) {
+        failedRecordIds.push(cave.id);
+        throw appendFailedRecordSummary(
+          session,
+          session.text('commands.cave.admin.reindex.messages.reindexFailed', {
+            backupPath,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          failedRecordIds
+        );
+      }
     }
 
     await verifyCaveSnapshot(ctx, reindexedCaves);
@@ -877,10 +971,12 @@ export async function reindexCaveIds(ctx: Context, session: Session, cfg: Config
     });
   } catch (error) {
     ctx.logger.error(`Failed to reindex cave ids: ${error}`);
-    return session.text('commands.cave.admin.reindex.messages.reindexFailed', {
-      backupPath,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    return typeof error === 'string'
+      ? error
+      : session.text('commands.cave.admin.reindex.messages.reindexFailed', {
+          backupPath,
+          error: error instanceof Error ? error.message : String(error),
+        });
   } finally {
     setCaveMaintenanceLock(false);
   }
@@ -940,6 +1036,35 @@ export async function restoreReindexBackup(
       ...toCaveSnapshotRecord(record),
       entryId: record.entryId,
     }));
+    let processedCount = 0;
+    const failedRecordIds: number[] = [];
+
+    for (const cave of restoreRecords) {
+      try {
+        if (typeof cave.entryId !== 'number') {
+          throw new Error(`missing_entry_id_for_cave_${cave.id}`);
+        }
+
+        processedCount += 1;
+        await sendBatchProgressIfNeeded(
+          session,
+          processedCount,
+          restoreRecords.length,
+          'commands.cave.admin.restore-reindex.messages.progress'
+        );
+      } catch (error) {
+        failedRecordIds.push(cave.id);
+        throw appendFailedRecordSummary(
+          session,
+          session.text('commands.cave.admin.restore-reindex.messages.restoreFailed', {
+            backupPath,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          failedRecordIds
+        );
+      }
+    }
+
     await replaceCaveSnapshot(ctx, currentCaves, restoreRecords);
     await verifyRestoredSnapshot(ctx, backup.records);
     return session.text('commands.cave.admin.restore-reindex.messages.restoreDone', {
@@ -948,10 +1073,12 @@ export async function restoreReindexBackup(
     });
   } catch (error) {
     ctx.logger.error(`Failed to restore cave reindex backup: ${error}`);
-    return session.text('commands.cave.admin.restore-reindex.messages.restoreFailed', {
-      backupPath,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    return typeof error === 'string'
+      ? error
+      : session.text('commands.cave.admin.restore-reindex.messages.restoreFailed', {
+          backupPath,
+          error: error instanceof Error ? error.message : String(error),
+        });
   } finally {
     setCaveMaintenanceLock(false);
   }

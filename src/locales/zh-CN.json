@@ -158,6 +158,7 @@
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次操作。",
         "confirmTimeout": "⌛ 二次确认超时，操作未执行。",
+        "progress": "⏳ 群聊回声洞合并进度：已处理 {processedCount}/{totalCount} 条记录。",
         "mergeDone": "✅ 合并完成：处理了 {mergedRecords} 条记录，媒体复制 {mediaCopied} 个、移动 {mediaMoved} 个、上传 {mediaUploaded} 个、失败 {mediaFailed} 个。"
       }
     },
@@ -184,6 +185,7 @@
     "cave.admin.migrate-local-v2": {
       "description": "迁移旧本地媒体目录到 V2 分群存储格式",
       "messages": {
+        "progress": "⏳ 本地媒体迁移进度：已处理 {processedCount}/{totalCount} 条记录。",
         "migrateDone": "✅ 本地媒体迁移完成：扫描 {scannedRecords} 条记录，更新 {recordsUpdated} 条记录，复制 {mediaCopied} 个、移动 {mediaMoved} 个、失败 {mediaFailed} 个。"
       }
     },
@@ -196,7 +198,7 @@
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次操作。",
         "confirmTimeout": "⌛ 二次确认超时，操作未执行。",
-        "itemUploaded": "📦 已上传到 S3：回声洞 #{caveId} 的{mediaType}",
+        "progress": "⏳ S3 迁移进度：已处理 {processedCount}/{totalCount} 条记录。",
         "migrateDone": "✅ S3 迁移完成：扫描 {scannedRecords} 条记录，更新 {recordsUpdated} 条记录，上传 {mediaUploaded} 个、复制 {mediaCopied} 个、移动 {mediaMoved} 个、删除 {mediaDeleted} 个、失败 {mediaFailed} 个。"
       }
     },
@@ -207,10 +209,12 @@
         "allRanges": "全部",
         "noMediaFound": "🔍 在范围 {idRanges} 内未检测到任何媒体链接。",
         "resultItem": "回声洞 #{id}\n{refs}",
-        "confirmSummary": "⚠️ 即将执行媒体链接检测（只读）\n检测范围：{idRanges}\n命中回声洞数：{matchedCount}\n\n本次操作不会上传 S3、不会删除本地媒体、不会改写数据库，但会逐条发送检测结果。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
+        "confirmSummary": "⚠️ 即将执行媒体链接检测（只读）\n检测范围：{idRanges}\n命中回声洞数：{matchedCount}\n\n本次操作不会上传 S3、不会删除本地媒体、不会改写数据库；检测结果会按批次发送进度与明细。请在 30 秒内输入“确认”继续，输入“取消”可终止。",
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次检测。",
-        "confirmTimeout": "⌛ 二次确认超时，检测未执行。"
+        "confirmTimeout": "⌛ 二次确认超时，检测未执行。",
+        "progress": "⏳ 媒体链接检测进度：已发送 {processedCount}/{totalCount} 条命中结果。",
+        "inspectDone": "✅ 媒体链接检测完成：共扫描 {scannedRecords} 条记录，命中 {matchedCount} 条回声洞。"
       }
     },
     "cave.admin.backfill-media-urls": {
@@ -222,6 +226,7 @@
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次媒体 URL 回填。",
         "confirmTimeout": "⌛ 二次确认超时，媒体 URL 回填未执行。",
+        "progress": "⏳ 媒体 URL 回填进度：已处理 {processedCount}/{totalCount} 条候选记录。",
         "backfillDone": "✅ 媒体 URL 回填完成：扫描 {scannedRecords} 条候选记录，成功更新 {updatedCount} 条，无媒体可回填 {skippedWithoutMedia} 条。"
       }
     },
@@ -235,6 +240,7 @@
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次回声洞 ID 重排。",
         "confirmTimeout": "⌛ 二次确认超时，回声洞 ID 重排未执行。",
+        "progress": "⏳ 回声洞 ID 重排进度：已处理 {processedCount}/{totalCount} 条记录。",
         "reindexDone": "✅ 回声洞 public ID 重排完成，共处理 {caveCount} 条记录。备份文件：{backupPath}",
         "reindexFailed": "❌ 回声洞 ID 重排失败，已停止继续写入。可使用 cave.admin.restore-reindex 恢复备份：{backupPath}\n错误：{error}"
       }
@@ -248,6 +254,7 @@
         "confirmRetry": "⚠️ 未收到“确认”。请在剩余时间内输入“确认”继续，或输入“取消”终止。",
         "confirmCancelled": "🛑 已取消本次回声洞备份恢复。",
         "confirmTimeout": "⌛ 二次确认超时，回声洞备份恢复未执行。",
+        "progress": "⏳ 回声洞备份恢复进度：已校验 {processedCount}/{totalCount} 条记录。",
         "restoreDone": "✅ 回声洞备份恢复完成，共恢复 {caveCount} 条记录。备份文件：{backupPath}",
         "restoreFailed": "❌ 回声洞备份恢复失败，已尝试回滚到恢复前状态：{backupPath}\n错误：{error}"
       }

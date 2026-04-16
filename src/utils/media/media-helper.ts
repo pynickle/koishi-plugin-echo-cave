@@ -66,6 +66,7 @@ interface MutationState {
 interface RewriteHooks {
   onS3Upload?: (type: MediaType, nextRef: string) => Promise<void>;
   onMigrationCommitted?: () => Promise<void>;
+  onRecordProcessed?: (status: 'updated' | 'skipped' | 'failed') => Promise<void>;
 }
 
 interface S3Location {
@@ -91,6 +92,12 @@ interface MediaSaveProgressOptions {
 interface CaveMediaRefs {
   id: number;
   refs: string[];
+}
+
+interface InspectCaveMediaRefsResult {
+  failedRecordIds: number[];
+  results: CaveMediaRefs[];
+  scannedRecords: number;
 }
 
 interface StoredCaveMediaRecord {
@@ -1289,14 +1296,18 @@ async function deleteCavesForOversizedMedia(
 export async function inspectCaveMediaRefs(
   ctx: Context,
   shouldInclude?: (caveId: number) => boolean
-): Promise<CaveMediaRefs[]> {
+): Promise<InspectCaveMediaRefsResult> {
   const caves = await getAllCaves(ctx);
+  let scannedRecords = 0;
+  const failedRecordIds: number[] = [];
   const results: CaveMediaRefs[] = [];
 
   for (const cave of caves) {
     if (shouldInclude && !shouldInclude(cave.id)) {
       continue;
     }
+
+    scannedRecords += 1;
 
     try {
       const refs = await collectMessageMediaRefs(ctx, cave.content);
@@ -1307,11 +1318,16 @@ export async function inspectCaveMediaRefs(
         });
       }
     } catch (error) {
+      failedRecordIds.push(cave.id);
       ctx.logger.warn(`Failed to inspect media refs for cave #${cave.id}: ${error}`);
     }
   }
 
-  return results;
+  return {
+    failedRecordIds,
+    results,
+    scannedRecords,
+  };
 }
 
 async function rewriteMessageMediaStorage(
@@ -1807,7 +1823,11 @@ export async function deleteMediaFilesFromMessage(ctx: Context, content: string,
   });
 }
 
-export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
+export async function migrateLocalMediaToV2(
+  ctx: Context,
+  cfg: Config,
+  createHooks?: (caveId: number) => RewriteHooks
+) {
   const caves = await getAllCaves(ctx);
   const stats = createEmptyStats();
   const state: MutationState = {
@@ -1817,6 +1837,8 @@ export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
 
   for (const cave of caves) {
     let rewritten: RewriteResult | null = null;
+    let status: 'updated' | 'skipped' | 'failed' = 'skipped';
+    const hooks = createHooks?.(cave.id);
     try {
       rewritten = await rewriteMessageMediaStorage(
         ctx,
@@ -1827,7 +1849,8 @@ export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
         cfg,
         state,
         stats,
-        (fileRef, type) => isLegacyLocalMediaRef(ctx, fileRef, type)
+        (fileRef, type) => isLegacyLocalMediaRef(ctx, fileRef, type),
+        hooks
       );
 
       const mediaUrlFields = await collectStoredMessageMediaUrls(ctx, rewritten.content);
@@ -1843,13 +1866,17 @@ export async function migrateLocalMediaToV2(ctx: Context, cfg: Config) {
           ...mediaUrlFields,
         });
         await runTransferPlans(rewritten.plans, 'commit');
+        status = 'updated';
       }
     } catch (error) {
       if (rewritten) {
         await runTransferPlans(rewritten.plans, 'rollback');
       }
       failedRecordIds.push(cave.id);
+      status = 'failed';
       ctx.logger.warn(`Failed to migrate legacy local media for cave #${cave.id}: ${error}`);
+    } finally {
+      await hooks?.onRecordProcessed?.(status);
     }
   }
 
@@ -1875,6 +1902,7 @@ export async function migrateLocalMediaToS3(
 
   for (const cave of caves) {
     let rewritten: RewriteResult | null = null;
+    let status: 'updated' | 'skipped' | 'failed' = 'skipped';
     const hooks = createHooks?.(cave.id);
     try {
       rewritten = await rewriteMessageMediaStorage(
@@ -1904,13 +1932,17 @@ export async function migrateLocalMediaToS3(
         });
         await runTransferPlans(rewritten.plans, 'commit');
         await hooks?.onMigrationCommitted?.();
+        status = 'updated';
       }
     } catch (error) {
       if (rewritten) {
         await runTransferPlans(rewritten.plans, 'rollback');
       }
       failedRecordIds.push(cave.id);
+      status = 'failed';
       ctx.logger.warn(`Failed to migrate local media to S3 for cave #${cave.id}: ${error}`);
+    } finally {
+      await hooks?.onRecordProcessed?.(status);
     }
   }
 
@@ -1926,7 +1958,8 @@ export async function mergeChannelCaves(
   cfg: Config,
   sourceChannelId: string,
   targetChannelId: string,
-  keepSource: boolean
+  keepSource: boolean,
+  createHooks?: (caveId: number) => RewriteHooks
 ) {
   const sourceCaves = await getCavesByChannel(ctx, sourceChannelId);
   const targetMode = getStorageMode(cfg);
@@ -1940,6 +1973,8 @@ export async function mergeChannelCaves(
   let mergedRecords = 0;
   for (const cave of sourceCaves) {
     let rewritten: RewriteResult | null = null;
+    let status: 'updated' | 'skipped' | 'failed' = 'skipped';
+    const hooks = createHooks?.(cave.id);
     try {
       rewritten = await rewriteMessageMediaStorage(
         ctx,
@@ -1949,7 +1984,9 @@ export async function mergeChannelCaves(
         transferMode,
         cfg,
         state,
-        stats
+        stats,
+        undefined,
+        hooks
       );
 
       if (keepSource) {
@@ -1985,12 +2022,16 @@ export async function mergeChannelCaves(
 
       await runTransferPlans(rewritten.plans, 'commit');
       mergedRecords += 1;
+      status = 'updated';
     } catch (error) {
       if (rewritten) {
         await runTransferPlans(rewritten.plans, 'rollback');
       }
       failedRecordIds.push(cave.id);
+      status = 'failed';
       ctx.logger.warn(`Failed to merge cave #${cave.id}: ${error}`);
+    } finally {
+      await hooks?.onRecordProcessed?.(status);
     }
   }
 
