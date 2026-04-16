@@ -377,7 +377,10 @@ async function sendBatchProgressIfNeeded(
   );
 }
 
-async function sendBatchedInspectResults(session: Session, batch: Array<{ id: number; refs: string[] }>) {
+async function sendBatchedInspectResults(
+  session: Session,
+  batch: Array<{ id: number; refs: string[] }>
+) {
   if (batch.length === 0) {
     return;
   }
