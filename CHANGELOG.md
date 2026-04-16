@@ -1,3 +1,9 @@
+## [1.31.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.31.2...v1.31.3) (2026-04-16)
+
+### 🔧 Miscellaneous Changes
+
+* fix type error ([269bab3](https://github.com/pynickle/koishi-plugin-echo-cave/commit/269bab3c633159a2229d45479a8ce9360fed14eb))
+
 ## [1.31.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.31.1...v1.31.2) (2026-04-16)
 
 ### 🚀 Improvements
