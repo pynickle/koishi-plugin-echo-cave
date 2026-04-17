@@ -26,6 +26,9 @@ export async function sendCaveMsg(
     content.map(async (element) => (await resolveMediaElementForSend(ctx, element, cfg)) as CQCode)
   );
 
+  const startsWithText = content[0]?.type === 'text';
+  const endsWithText = content.at(-1)?.type === 'text';
+
   // Format necessary information
   const date = formatDate(caveMsg.createTime);
   const originName = await getUserName(ctx, session, caveMsg.originUserId);
@@ -48,6 +51,8 @@ export async function sendCaveMsg(
     userName,
     relatedUsers: relatedUsersFormatted,
     nl: '\n',
+    textStartNl: startsWithText ? '\n' : '',
+    textEndNl: endsWithText ? '\n' : '',
   };
 
   const TEMPLATE_COUNT = 5;
@@ -132,11 +137,8 @@ export async function sendCaveMsg(
   // Randomly select a template
   const chosenTemplate = availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
 
-  const last = content.at(-1);
-  const needsNewline = last?.type === 'text';
-
-  content.unshift(createTextMsg(chosenTemplate.prefix + '\n'));
-  content.push(createTextMsg(`${needsNewline ? '\n' : ''}${chosenTemplate.suffix}`));
+  content.unshift(createTextMsg(chosenTemplate.prefix));
+  content.push(createTextMsg(chosenTemplate.suffix));
 
   await session.onebot.sendGroupMsg(channelId, content);
 }
