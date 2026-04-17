@@ -1,3 +1,15 @@
+## [1.32.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.31.3...v1.32.0) (2026-04-17)
+
+### ✨ Features
+
+* add textstartnl and textendnl ([e4914cc](https://github.com/pynickle/koishi-plugin-echo-cave/commit/e4914cccab72bb8999a96938d57fc2b4154df795))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/client-s3 to ^3.1031.0 ([a9f8f81](https://github.com/pynickle/koishi-plugin-echo-cave/commit/a9f8f81e74718f62e6417d18ad9c91a6f3e8c6ce))
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1031.0 ([cc3fadd](https://github.com/pynickle/koishi-plugin-echo-cave/commit/cc3fadd0e1aeffa94e89b0ab944266c3954d496d))
+* **deps:** update dependency typescript to ^6.0.3 ([fe1f9d1](https://github.com/pynickle/koishi-plugin-echo-cave/commit/fe1f9d116e5d088ba32def8827be79929f09fe30))
+
 ## [1.31.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.31.2...v1.31.3) (2026-04-16)
 
 ### 🔧 Miscellaneous Changes
