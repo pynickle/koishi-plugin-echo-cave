@@ -1,3 +1,9 @@
+## [1.32.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.32.1...v1.32.2) (2026-04-18)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/client-s3 to ^3.1032.0 ([2860500](https://github.com/pynickle/koishi-plugin-echo-cave/commit/28605005f2acac59b3c5fd39cfd74937902e66a0))
+
 ## [1.32.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.32.0...v1.32.1) (2026-04-18)
 
 ### 🔧 Miscellaneous Changes
