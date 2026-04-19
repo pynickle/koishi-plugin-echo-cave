@@ -1,3 +1,9 @@
+## [1.32.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.32.2...v1.32.3) (2026-04-19)
+
+### 🐛 Bug Fixes
+
+* fix esbuild ([e4ef49e](https://github.com/pynickle/koishi-plugin-echo-cave/commit/e4ef49e64654fd7159fd0a277968e03c2a3f56ef))
+
 ## [1.32.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.32.1...v1.32.2) (2026-04-18)
 
 ### 🔧 Miscellaneous Changes
