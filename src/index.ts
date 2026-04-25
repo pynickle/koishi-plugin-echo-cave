@@ -22,7 +22,7 @@ import { bindUsersToCave } from './core/command/misc/bind-user';
 import { getRanking } from './core/command/rank';
 import { searchCave } from './core/command/search-cave';
 import zhCN from './locales/zh-CN.json';
-import { Context } from 'koishi';
+import { Context, Session } from 'koishi';
 
 export const name = 'echo-cave';
 
@@ -71,6 +71,9 @@ declare module 'koishi' {
     echo_cave_v3: EchoCave;
     echo_cave_send_failure: EchoCaveSendFailure;
     echo_cave_user_state: EchoCaveUserState;
+  }
+  interface Events {
+    notice(session: Session): void;
   }
 }
 
@@ -186,6 +189,28 @@ export function apply(ctx: Context, cfg: Config) {
   ctx
     .command('cave [target:text]')
     .action(async ({ session }, target) => await getCave(ctx, session, cfg, target));
+
+  // Poke (OneBot notify.poke) — runs the `cave` command via session.execute
+  // so middleware, authority, and i18n scoping all match a real command call.
+  const pokeCooldown = new Map<string, number>();
+  const POKE_COOLDOWN_MS = 5000;
+  ctx.on('notice', async (session) => {
+    if (session.platform !== 'onebot') return;
+    if (session.subtype !== 'poke') return;
+    if (!session.guildId) return;
+    if (session['targetId'] !== session.selfId) return;
+    if (cfg.enablePokeTrigger === false) return;
+    const key = `${session.channelId}:${session.userId}`;
+    const now = Date.now();
+    if (now - (pokeCooldown.get(key) ?? 0) < POKE_COOLDOWN_MS) return;
+    if (pokeCooldown.size >= 256) {
+      for (const [k, t] of pokeCooldown) {
+        if (now - t > POKE_COOLDOWN_MS) pokeCooldown.delete(k);
+      }
+    }
+    pokeCooldown.set(key, now);
+    await session.execute('cave');
+  });
 
   ctx
     .command('cave.pic')

@@ -17,6 +17,7 @@
   "enableForwardUserSelection": "是否启用合并转发消息的关联用户选择功能",
   "autoBindSingleForwardUser": "合并转发消息仅识别到一个用户时，是否默认自动绑定该用户",
   "forwardSpecialUserHandlingMode": "检测到特殊用户 1094950020 时的处理方式：ignore 为忽略，reject 为提醒并拒绝存储，confirm 为提醒、展示转发内容并要求确认后再存储",
+  "enablePokeTrigger": "在群聊中拍一拍机器人时，是否触发与 cave 指令相同的随机抽取效果（仅 OneBot/NapCat 等支持 notify.poke 事件的适配器有效）",
   "alpha": "加权随机抽取的调整因子，控制抽取次数对概率的影响程度，值越大影响越明显",
   "mediaStorage": "媒体存储方式：local 为本地，s3 为对象存储",
   "s3UploadFailureFallbackMode": "仅在媒体存储方式为 s3 时生效：S3 上传失败后回退到本地存储，或保留原始链接",

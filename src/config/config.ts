@@ -24,6 +24,7 @@ export interface Config {
   enableForwardUserSelection?: boolean;
   autoBindSingleForwardUser?: boolean;
   forwardSpecialUserHandlingMode?: ForwardSpecialUserHandlingMode;
+  enablePokeTrigger?: boolean;
   alpha?: number;
   mediaStorage?: 'local' | 's3';
   s3UploadFailureFallbackMode?: S3UploadFailureFallbackMode;
@@ -58,6 +59,7 @@ export const Config: Schema<Config> = Schema.intersect([
     forwardSelectTimeout: Schema.number().default(20),
     autoBindSingleForwardUser: Schema.boolean().default(false),
     forwardSpecialUserHandlingMode: Schema.union(['ignore', 'reject', 'confirm']).default('ignore'),
+    enablePokeTrigger: Schema.boolean().default(true),
   }).description('消息行为'),
   Schema.object({
     deleteMediaWhenDeletingMsg: Schema.boolean().default(true),
