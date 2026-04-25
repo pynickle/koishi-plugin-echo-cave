@@ -1,3 +1,9 @@
+## [1.33.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.32.3...v1.33.0) (2026-04-25)
+
+### ✨ Features
+
+* poke cave ([aeccf3e](https://github.com/pynickle/koishi-plugin-echo-cave/commit/aeccf3e4ea6da5b4796cc931059e8a923f644f5c))
+
 ## [1.32.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.32.2...v1.32.3) (2026-04-19)
 
 ### 🐛 Bug Fixes
