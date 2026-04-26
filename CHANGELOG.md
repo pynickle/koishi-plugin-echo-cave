@@ -1,3 +1,9 @@
+## [1.34.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.33.0...v1.34.0) (2026-04-26)
+
+### ✨ Features
+
+* add enable group ([857fc77](https://github.com/pynickle/koishi-plugin-echo-cave/commit/857fc77192b4cfbd0709b0cfeabce8bf5b167694))
+
 ## [1.33.0](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.32.3...v1.33.0) (2026-04-25)
 
 ### ✨ Features
