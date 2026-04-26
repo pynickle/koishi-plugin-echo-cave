@@ -7,6 +7,8 @@ export type ForwardSpecialUserHandlingMode = 'ignore' | 'reject' | 'confirm';
 export type S3UploadFailureFallbackMode = 'local' | 'original-link';
 
 export interface Config {
+  enableChannelWhitelist?: boolean;
+  channelWhitelist?: string[];
   adminMessageProtection?: boolean;
   adminIds?: string[];
   allowContributorDelete?: boolean;
@@ -45,6 +47,10 @@ export interface Config {
 }
 
 export const Config: Schema<Config> = Schema.intersect([
+  Schema.object({
+    enableChannelWhitelist: Schema.boolean().default(false),
+    channelWhitelist: Schema.array(String).role('table').default([]),
+  }).description('群聊白名单'),
   Schema.object({
     adminMessageProtection: Schema.boolean().default(false),
     adminIds: Schema.array(String).role('table').default([]),

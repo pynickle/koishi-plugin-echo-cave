@@ -1,4 +1,6 @@
 {
+  "enableChannelWhitelist": "是否启用群聊白名单模式，开启后仅在白名单中的群聊可以使用回声洞功能；关闭则默认全部群聊均可用",
+  "channelWhitelist": "群聊白名单 (channel ID 列表)，仅在启用白名单模式时生效",
   "adminMessageProtection": "开启管理员消息保护，开启后管理员发布的消息只能由管理员删除",
   "adminIds": "管理员 ID 列表，仅这些用户可在私聊使用管理迁移命令",
   "allowContributorDelete": "允许投稿者删除自己投稿的回声洞",

@@ -173,6 +173,27 @@ export function apply(ctx: Context, cfg: Config) {
     }
   );
 
+  const isCaveCommandWord = (word: string) => word === 'cave' || word.startsWith('cave.');
+
+  const isChannelAllowed = (channelId: string | undefined) => {
+    if (!cfg.enableChannelWhitelist) return true;
+    if (!channelId) return true;
+    return (cfg.channelWhitelist ?? []).includes(channelId);
+  };
+
+  ctx.middleware(async (session, next) => {
+    if (!cfg.enableChannelWhitelist) return next();
+    if (!session.guildId) return next();
+    if (isChannelAllowed(session.channelId)) return next();
+    const parsedContent = (session as unknown as { parsed?: { content?: string } }).parsed?.content;
+    const content = (parsedContent ?? session.content ?? '').trim();
+    const firstWord = content.split(/\s+/)[0] ?? '';
+    if (isCaveCommandWord(firstWord)) {
+      return;
+    }
+    return next();
+  }, true);
+
   ctx.model.migrate('echo_cave_v2', {}, async (database) => {
     const existing = await database.get(ACTIVE_CAVE_TABLE, {});
     if (existing.length > 0) {
@@ -200,6 +221,7 @@ export function apply(ctx: Context, cfg: Config) {
     if (!session.guildId) return;
     if (session['targetId'] !== session.selfId) return;
     if (cfg.enablePokeTrigger === false) return;
+    if (!isChannelAllowed(session.channelId)) return;
     const key = `${session.channelId}:${session.userId}`;
     const now = Date.now();
     if (now - (pokeCooldown.get(key) ?? 0) < POKE_COOLDOWN_MS) return;
