@@ -808,7 +808,8 @@ async function loadMediaBuffer(ctx: Context, fileRef: string, cfg: Config): Prom
     }
 
     const contentTypeHeader = response.headers['content-type'];
-    const contentType = Array.isArray(contentTypeHeader) ? contentTypeHeader[0] : contentTypeHeader;
+    const firstContentType = Array.isArray(contentTypeHeader) ? contentTypeHeader[0] : contentTypeHeader;
+    const contentType = typeof firstContentType === 'string' ? firstContentType : undefined;
 
     return {
       buffer: Buffer.from(response.data),
