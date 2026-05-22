@@ -1,3 +1,25 @@
+## [1.34.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.1...v1.34.2) (2026-05-22)
+
+### 🐛 Bug Fixes
+
+* fix axios error ([1f8342c](https://github.com/pynickle/koishi-plugin-echo-cave/commit/1f8342c30442694cd9844f3abfac78fd49f37ca6))
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency @aws-sdk/client-s3 to ^3.1051.0 ([d731b44](https://github.com/pynickle/koishi-plugin-echo-cave/commit/d731b4484c4b2586ee9d00db045b6bad56abba3e))
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1044.0 ([86602c0](https://github.com/pynickle/koishi-plugin-echo-cave/commit/86602c003154f058135d3e408a8723883c7f5bd4))
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1050.0 ([9065fcb](https://github.com/pynickle/koishi-plugin-echo-cave/commit/9065fcb29fbd359e03cd8c98d3a7d0fe0aefd15e))
+* **deps:** update dependency @aws-sdk/s3-request-presigner to ^3.1052.0 ([7d405b2](https://github.com/pynickle/koishi-plugin-echo-cave/commit/7d405b2cc694d6ebc24e9a7052dd33c71683111f))
+* **deps:** update dependency @semantic-release/release-notes-generator to ^14.1.1 ([30936ca](https://github.com/pynickle/koishi-plugin-echo-cave/commit/30936cafba745748c7804115d7ac36de57cd2c90))
+* **deps:** update dependency @types/node to ^24.12.4 ([aedb098](https://github.com/pynickle/koishi-plugin-echo-cave/commit/aedb0983bdaeee32a805388d70faefd2fb501dda))
+* **deps:** update dependency axios to ^1.16.0 ([d70b462](https://github.com/pynickle/koishi-plugin-echo-cave/commit/d70b462580ec9ba1fc91d1266a5b9a859c229316))
+* **deps:** update dependency axios to ^1.16.1 ([a0d87b5](https://github.com/pynickle/koishi-plugin-echo-cave/commit/a0d87b5b2d64e26fd93be0d163caf01095f5d0ef))
+* **deps:** update dependency oxfmt to ^0.48.0 ([039c892](https://github.com/pynickle/koishi-plugin-echo-cave/commit/039c89253b516d98e21a8b3499f87478140bc0f3))
+* **deps:** update dependency oxfmt to ^0.51.0 ([07849e8](https://github.com/pynickle/koishi-plugin-echo-cave/commit/07849e822715df90012da847d6b8fc084dd35925))
+* **deps:** update dependency oxlint to ^1.63.0 ([1ff6b8a](https://github.com/pynickle/koishi-plugin-echo-cave/commit/1ff6b8a33d10f161b6016c48b553349bb2631de6))
+* **deps:** update dependency pnpm to v10.33.4 ([0f4fc62](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0f4fc62d6993e8cacc987ead1f8c19bf35b7e5e7))
+* update deps ([0a9e9cb](https://github.com/pynickle/koishi-plugin-echo-cave/commit/0a9e9cbb79c86826a77b948256d2ede9d35e6a74))
+
 ## [1.34.1](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.0...v1.34.1) (2026-04-28)
 
 ### 🔧 Miscellaneous Changes
