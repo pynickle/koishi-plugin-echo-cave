@@ -82,6 +82,8 @@ interface LoadedMedia {
 
 interface MediaSaveProgressState {
   progressMessageIds?: string[];
+  progressMessageRequested?: boolean;
+  progressMessagePromise?: Promise<void>;
 }
 
 interface MediaSaveProgressOptions {
@@ -1632,14 +1634,19 @@ export async function messageContainsMedia(content: unknown): Promise<boolean> {
 }
 
 async function ensureMediaSaveProgress(progressOptions?: MediaSaveProgressOptions) {
-  if (!progressOptions || progressOptions.state.progressMessageIds?.length) {
+  if (!progressOptions || progressOptions.state.progressMessageRequested) {
     return;
   }
 
   const { session, state } = progressOptions;
-  state.progressMessageIds = await session.send(
-    session.text('commands.cave.echo.messages.mediaSaving')
-  );
+  state.progressMessageRequested = true;
+  state.progressMessagePromise = (async () => {
+    state.progressMessageIds = await session.send(
+      session.text('commands.cave.echo.messages.mediaSaving')
+    );
+  })();
+
+  await state.progressMessagePromise;
 }
 
 export async function resolveMediaElementForSend(
