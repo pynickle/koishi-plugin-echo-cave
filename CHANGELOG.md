@@ -1,3 +1,14 @@
+## [1.34.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.2...v1.34.3) (2026-05-26)
+
+### 🔧 Miscellaneous Changes
+
+* remove AGENTS.md ([4c40a5d](https://github.com/pynickle/koishi-plugin-echo-cave/commit/4c40a5de90e060ff077727050a5a73e2d6c0b7f2))
+* update deps ([e8379f6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/e8379f650532c0318c12456ff9aa6c86b4d5bd1f))
+
+### 🚀 Improvements
+
+* only one message when saving medias ([8d4b148](https://github.com/pynickle/koishi-plugin-echo-cave/commit/8d4b14822db3f36ffa37d8aeb9a21ebe4a17a939))
+
 ## [1.34.2](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.1...v1.34.2) (2026-05-22)
 
 ### 🐛 Bug Fixes
