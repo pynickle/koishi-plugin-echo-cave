@@ -1,3 +1,9 @@
+## [1.34.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.3...v1.34.4) (2026-05-28)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update dependency oxfmt to ^0.52.0 ([3b0b8eb](https://github.com/pynickle/koishi-plugin-echo-cave/commit/3b0b8eb8d35e5271e7dd6b855234e37f164b270f))
+
 ## [1.34.3](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.2...v1.34.3) (2026-05-26)
 
 ### 🔧 Miscellaneous Changes
