@@ -1,3 +1,13 @@
+## [1.34.5](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.4...v1.34.5) (2026-06-24)
+
+### 🔧 Miscellaneous Changes
+
+* **deps:** update actions/checkout action to v7 ([e516e84](https://github.com/pynickle/koishi-plugin-echo-cave/commit/e516e84cebf33b09345d4343e0c868eb7df84a1c))
+* **deps:** update dependency esbuild to ^0.28.1 ([1c350ab](https://github.com/pynickle/koishi-plugin-echo-cave/commit/1c350ab9f4ce06b99c8cba05bd4240a2a7b4def9))
+* **deps:** update dependency oxlint to ^1.70.0 ([a366247](https://github.com/pynickle/koishi-plugin-echo-cave/commit/a3662475b74a8ebd104126a168c65c0e85125500))
+* **deps:** update dependency pnpm to v11.7.0 ([91981dc](https://github.com/pynickle/koishi-plugin-echo-cave/commit/91981dcb71c07570115c1813f3ca7a0ee69045cc))
+* **deps:** update dependency pnpm to v11.9.0 ([bcc98f6](https://github.com/pynickle/koishi-plugin-echo-cave/commit/bcc98f671d4ced2ce9f9bd3c908b28f262ef3ace))
+
 ## [1.34.4](https://github.com/pynickle/koishi-plugin-echo-cave/compare/v1.34.3...v1.34.4) (2026-05-28)
 
 ### 🔧 Miscellaneous Changes
