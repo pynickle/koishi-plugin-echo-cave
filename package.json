@@ -52,7 +52,7 @@
     "conventional-changelog-conventionalcommits": "^10.3.0",
     "esbuild": "^0.28.1",
     "oxfmt": "^0.52.0",
-    "oxlint": "^1.73.0",
+    "oxlint": "^1.81.0",
     "semantic-release": "^25.0.7",
     "typescript": "^7.0.2"
   }
